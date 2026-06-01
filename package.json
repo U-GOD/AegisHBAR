@@ -1,0 +1,21 @@
+{
+  "name": "aegishbar",
+  "version": "1.0.0",
+  "description": "**Pay-Per-Audit Smart Contract Security Agent on Hedera**",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/U-GOD/AegisHBAR.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/U-GOD/AegisHBAR/issues"
+  },
+  "homepage": "https://github.com/U-GOD/AegisHBAR#readme"
+}
