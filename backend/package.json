@@ -11,10 +11,12 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@hashgraph/sdk": "^2.81.0",
     "@x402/express": "^2.14.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "hedera-agent-kit": "^3.8.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
