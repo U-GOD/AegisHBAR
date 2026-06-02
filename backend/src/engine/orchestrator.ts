@@ -1,6 +1,11 @@
 import crypto from "crypto";
 import { parseSolidityCode } from "../utils/parser";
-import { Finding, AuditReport, Category, Severity } from "./types";
+import { Finding, AuditReport } from "./types";
+import { analyzeReentrancy } from "./analyzers/reentrancy";
+import { analyzeAccessControl } from "./analyzers/accessControl";
+import { analyzeOverflow } from "./analyzers/overflow";
+import { analyzeGas } from "./analyzers/gas";
+import { analyzeLogic } from "./analyzers/logic";
 
 /**
  * Central orchestrator for the AI-driven smart contract analysis pipeline.
@@ -21,10 +26,9 @@ export class AnalysisEngine {
         const ast = parseSolidityCode(this.sourceCode);
         const findings: Finding[] = [];
 
-        // Walk the AST and collect findings from each category analyzer
         for (const node of ast.children) {
             if (node.type === "ContractDefinition") {
-                const contractFindings = await this.analyzeContract(node);
+                const contractFindings = this.analyzeContract(node);
                 findings.push(...contractFindings);
             }
         }
@@ -32,50 +36,16 @@ export class AnalysisEngine {
         return this.buildReport(findings);
     }
 
-    /**
-     * Dispatches a contract AST node through all registered category analyzers.
-     * Each analyzer inspects the node for a specific class of vulnerability.
-     */
-    private async analyzeContract(contractNode: any): Promise<Finding[]> {
+    private analyzeContract(contractNode: any): Finding[] {
         const findings: Finding[] = [];
 
-        const analyzers: { category: Category; analyze: (node: any) => Finding[] }[] = [
-            { category: "reentrancy", analyze: (node) => this.analyzeReentrancy(node) },
-            { category: "access-control", analyze: (node) => this.analyzeAccessControl(node) },
-            { category: "overflow", analyze: (node) => this.analyzeOverflow(node) },
-            { category: "gas-optimization", analyze: (node) => this.analyzeGas(node) },
-            { category: "logic", analyze: (node) => this.analyzeLogic(node) },
-        ];
-
-        for (const analyzer of analyzers) {
-            const result = analyzer.analyze(contractNode);
-            findings.push(...result);
-        }
+        findings.push(...analyzeReentrancy(contractNode));
+        findings.push(...analyzeAccessControl(contractNode));
+        findings.push(...analyzeOverflow(contractNode));
+        findings.push(...analyzeGas(contractNode));
+        findings.push(...analyzeLogic(contractNode));
 
         return findings;
-    }
-
-    // -- Category Analyzer Stubs --
-    // Each will be implemented in the next step as dedicated modules.
-
-    private analyzeReentrancy(node: any): Finding[] {
-        return [];
-    }
-
-    private analyzeAccessControl(node: any): Finding[] {
-        return [];
-    }
-
-    private analyzeOverflow(node: any): Finding[] {
-        return [];
-    }
-
-    private analyzeGas(node: any): Finding[] {
-        return [];
-    }
-
-    private analyzeLogic(node: any): Finding[] {
-        return [];
     }
 
     private buildReport(findings: Finding[]): AuditReport {
@@ -88,7 +58,6 @@ export class AnalysisEngine {
             total: findings.length,
         };
 
-        // Risk score: weighted sum normalized to 0-100
         const riskScore = Math.min(
             100,
             summary.critical * 25 + summary.high * 15 + summary.medium * 8 + summary.low * 3
