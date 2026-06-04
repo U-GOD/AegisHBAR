@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { TopNav } from "../components/TopNav";
 import { ContractUploader } from "../components/ContractUploader";
 import { CategorySelector, defaultCategories } from "../components/CategorySelector";
 import { AuditStartButton, AuditStatus } from "../components/AuditStartButton";
@@ -29,19 +28,17 @@ export default function Home() {
     };
 
     return (
-        <main className="min-h-screen bg-background text-on-surface flex flex-col font-sans">
-            <TopNav />
-            
-            <div className="flex-1 container max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8 mt-16">
+        <main className="flex-1 flex flex-col font-sans">
+            <div className="flex-1 container max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8 mt-8">
                 
                 {/* STATE 1: Not Auditing (Upload & Select) */}
                 {(!stream.isStreaming && !stream.report && auditStatus !== "streaming") && (
                     <div className="flex flex-col gap-8 animate-fade-in">
-                        <div className="text-center mb-4 mt-8">
-                            <h1 className="text-display-md font-bold text-on-surface mb-4">
+                        <div className="text-center mb-4 mt-4">
+                            <h1 className="text-display-sm font-bold text-on-surface mb-4">
                                 Secure Your <span className="text-primary">Hedera</span> Smart Contracts
                             </h1>
-                            <p className="text-body-lg text-on-surface-variant max-w-2xl mx-auto">
+                            <p className="text-body-md text-on-surface-variant max-w-2xl mx-auto">
                                 AI-powered vulnerability detection with immutable, on-chain NFT audit certificates.
                             </p>
                         </div>
