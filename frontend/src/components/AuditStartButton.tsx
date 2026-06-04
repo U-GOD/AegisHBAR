@@ -1,18 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { ethers } from "ethers";
 import { useWallet } from "../context/WalletContext";
 import { AuditCategory } from "./CategorySelector";
+import { x402Client } from "@x402/core/client";
+import { ExactEvmScheme } from "@x402/evm/exact/client";
+import { x402Fetch } from "@x402/fetch";
+import { ethers } from "ethers";
 
-const ESCROW_ADDRESS = process.env.NEXT_PUBLIC_ESCROW_ADDRESS || "";
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
-
-// Minimal ABI for the deposit function
-const ESCROW_ABI = [
-    "function deposit(uint256 timeoutSeconds) external payable returns (bytes32 depositId)",
-    "event DepositCreated(bytes32 indexed depositId, address indexed depositor, uint256 amount)"
-];
 
 export type AuditStatus = "idle" | "depositing" | "submitting" | "streaming" | "complete" | "error";
 
@@ -54,40 +50,50 @@ export function AuditStartButton({ sourceCode, categories, totalCost, onStatusCh
         }
 
         try {
-            // Step 1: Deposit HBAR into the escrow contract
             updateStatus("depositing");
-            const escrow = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, signer);
-            const depositValue = ethers.parseEther(totalCost.toString());
-            const timeoutSeconds = 3600; // 1 hour
+            
+            // Create a pseudo-depositId since we no longer have an on-chain escrow ID
+            // The backend uses this to uniquely identify the SSE stream
+            const depositId = ethers.hexlify(ethers.randomBytes(32));
+            const address = await signer.getAddress();
 
-            const tx = await escrow.deposit(timeoutSeconds, { value: depositValue });
-            const receipt = await tx.wait();
+            // 1. Wrap the ethers Signer into a ClientEvmSigner for @x402/evm
+            const evmSigner = {
+                address: address as `0x${string}`,
+                signTypedData: async (args: any) => {
+                    // Ethers v6 signTypedData signature: (domain, types, value)
+                    // We must filter out the EIP712Domain type from types, as ethers adds it automatically
+                    const types = { ...args.types };
+                    delete types.EIP712Domain;
+                    
+                    return (await signer.signTypedData(
+                        args.domain,
+                        types,
+                        args.message
+                    )) as `0x${string}`;
+                }
+            };
 
-            // Extract depositId from the DepositCreated event
-            const event = receipt.logs.find((log: any) => {
-                try {
-                    return escrow.interface.parseLog(log)?.name === "DepositCreated";
-                } catch { return false; }
-            });
+            // 2. Initialize the x402 client with the EVM Scheme
+            const client = new x402Client().register(
+                "eip155:296", // Hedera Testnet EVM
+                new ExactEvmScheme(evmSigner)
+            );
 
-            if (!event) {
-                throw new Error("Deposit transaction succeeded but no DepositCreated event was found.");
-            }
-
-            const parsed = escrow.interface.parseLog(event);
-            const depositId = parsed?.args[0];
-
-            // Step 2: Submit source code + deposit receipt to the backend
+            // 3. Make the API request using x402Fetch
+            // This will automatically intercept the 402 Payment Required response,
+            // prompt the user to sign the transaction via MetaMask, and retry the request.
             updateStatus("submitting");
-            const response = await fetch(`${BACKEND_URL}/api/audit`, {
+            const response = await x402Fetch(`${BACKEND_URL}/api/audit`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     sourceCode,
                     categories: selectedCategories,
                     depositId,
-                    depositor: await signer.getAddress(),
+                    depositor: address,
                 }),
+                client: client,
             });
 
             if (!response.ok) {
@@ -103,8 +109,8 @@ export function AuditStartButton({ sourceCode, categories, totalCost, onStatusCh
             console.error("[AuditStart] Error:", err);
             updateStatus("error");
 
-            if (err.code === "ACTION_REJECTED") {
-                setErrorMsg("Transaction was rejected in MetaMask.");
+            if (err.code === "ACTION_REJECTED" || err.message?.includes("rejected")) {
+                setErrorMsg("Payment transaction was rejected in MetaMask.");
             } else {
                 setErrorMsg(err.message || "An unexpected error occurred.");
             }
@@ -115,7 +121,7 @@ export function AuditStartButton({ sourceCode, categories, totalCost, onStatusCh
 
     const statusLabels: Record<string, string> = {
         idle: `Run Audit (${totalCost.toFixed(1)} HBAR)`,
-        depositing: "Depositing to Escrow...",
+        depositing: "Authorizing Payment...",
         submitting: "Submitting to Auditor...",
         streaming: "Audit in Progress...",
         complete: "Audit Complete",
