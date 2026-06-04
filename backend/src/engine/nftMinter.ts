@@ -28,6 +28,7 @@ export async function mintAuditNFT(
     
     const client = agentKit.client;
 
+
     const mintTx = new TokenMintTransaction()
         .setTokenId(CERTIFICATE_TOKEN_ID)
         .addMetadata(Buffer.from(tokenUri));
@@ -42,12 +43,13 @@ export async function mintAuditNFT(
     const serialNumber = mintReceipt.serials[0].toNumber();
     console.log(`[NFT Minter] Successfully minted HTS Certificate Serial #${serialNumber}`);
 
+
     try {
         console.log(`[NFT Minter] Transferring Serial #${serialNumber} to ${recipientAddress}...`);
         
         let targetAccountId = recipientAddress;
         
-        let targetAccountId = recipientAddress;
+
 
         const transferTx = new TransferTransaction()
             .addNftTransfer(
