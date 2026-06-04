@@ -55,7 +55,7 @@ app.post("/api/audit", async (req: Request, res: Response) => {
 });
 
 app.get("/api/audit/stream/:depositId", (req: Request, res: Response) => {
-    const { depositId } = req.params;
+    const depositId = req.params.depositId as string;
     const streamManager = activeStreams.get(depositId);
 
     if (!streamManager) {
@@ -68,7 +68,7 @@ app.get("/api/audit/stream/:depositId", (req: Request, res: Response) => {
 
 app.get("/api/certificate/:tokenId", async (req: Request, res: Response) => {
     try {
-        const { tokenId } = req.params;
+        const tokenId = req.params.tokenId as string;
         const provider = new ethers.JsonRpcProvider("https://testnet.hashio.io/api");
         const CERTIFICATE_ADDRESS = process.env.AUDIT_CERTIFICATE_ADDRESS || "";
         
