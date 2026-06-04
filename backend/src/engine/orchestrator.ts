@@ -8,7 +8,7 @@ import { analyzeGas } from "./analyzers/gas";
 import { analyzeLogic } from "./analyzers/logic";
 import { generateFixSuggestion } from "./suggester";
 import { SSEStreamManager } from "./stream";
-import { logReportToHCS } from "./hcsLogger";
+import { logFindingsToHCS } from "./hcsLogger";
 import { generatePdfReport } from "./pdfGenerator";
 import { uploadFileToIPFS, uploadMetadataToIPFS } from "./ipfs";
 import { mintAuditNFT } from "./nftMinter";
@@ -25,12 +25,12 @@ export async function runAuditPipeline(
     stream: SSEStreamManager
 ): Promise<void> {
     try {
-        stream.send("parsing", "Parsing Solidity AST...");
+        stream.send({ phase: "parsing", message: "Parsing Solidity AST..." });
         const ast = parseSolidityCode(sourceCode);
         const findings: Finding[] = [];
 
         // 1. Static Analysis
-        stream.send("analyzing", "Running static analysis modules...");
+        stream.send({ phase: "analyzing", message: "Running static analysis modules..." });
         for (const node of ast.children) {
             if (node.type === "ContractDefinition") {
                 if (categories.includes("reentrancy")) findings.push(...analyzeReentrancy(node));
@@ -42,10 +42,12 @@ export async function runAuditPipeline(
         }
 
         // 2. AI Fix Suggestions
-        stream.send("generating-fixes", "Generating AI fix suggestions...");
+        stream.send({ phase: "generating-fixes", message: "Generating AI fix suggestions..." });
         for (const finding of findings) {
             try {
-                finding.fixSuggestion = await generateFixSuggestion(finding, sourceCode);
+                const suggestion = await generateFixSuggestion(finding, sourceCode);
+                // Attach suggestion to the recommendation field
+                finding.recommendation = finding.recommendation + "\n\nAI Suggested Fix:\n" + suggestion;
             } catch (err) {
                 console.warn(`Failed to generate fix for finding ${finding.id}`, err);
             }
@@ -54,21 +56,21 @@ export async function runAuditPipeline(
         const report = buildReport(sourceCode, contractName, findings);
 
         // 3. Log to Hedera Consensus Service
-        stream.send("logging-hcs", "Logging immutable audit report to HCS...");
+        stream.send({ phase: "logging-hcs", message: "Logging immutable audit report to HCS..." });
         let hcsTopicId = "";
         try {
-            hcsTopicId = await logReportToHCS(report);
+            hcsTopicId = await logFindingsToHCS(report);
         } catch (err) {
             console.error("HCS logging failed:", err);
             hcsTopicId = "failed-to-log";
         }
 
         // 4. Generate PDF
-        stream.send("analyzing", "Generating PDF report...");
+        stream.send({ phase: "analyzing", message: "Generating PDF report..." });
         const pdfBuffer = await generatePdfReport(report);
 
         // 5. Upload to IPFS via Pinata
-        stream.send("analyzing", "Pinning report to IPFS...");
+        stream.send({ phase: "analyzing", message: "Pinning report to IPFS..." });
         let pdfIpfsUri = "";
         let metadataIpfsUri = "";
         try {
@@ -80,7 +82,7 @@ export async function runAuditPipeline(
         }
 
         // 6. Mint NFT
-        stream.send("analyzing", "Minting Audit Certificate NFT...");
+        stream.send({ phase: "analyzing", message: "Minting Audit Certificate NFT..." });
         let tokenId = 0;
         try {
             tokenId = await mintAuditNFT(depositorAddress, metadataIpfsUri, report, depositId, hcsTopicId);
@@ -88,7 +90,7 @@ export async function runAuditPipeline(
             console.error("NFT Minting failed:", err);
         }
 
-        stream.send("complete", "Audit pipeline finished successfully.", {
+        stream.complete({
             report,
             certificate: {
                 tokenId,
@@ -105,11 +107,11 @@ export async function runAuditPipeline(
 
 function buildReport(sourceCode: string, contractName: string, findings: Finding[]): AuditReport {
     const summary = {
-        critical: findings.filter((f) => f.severity === "Critical").length,
-        high: findings.filter((f) => f.severity === "High").length,
-        medium: findings.filter((f) => f.severity === "Medium").length,
-        low: findings.filter((f) => f.severity === "Low").length,
-        informational: findings.filter((f) => f.severity === "Info").length,
+        critical: findings.filter((f) => f.severity === "critical").length,
+        high: findings.filter((f) => f.severity === "high").length,
+        medium: findings.filter((f) => f.severity === "medium").length,
+        low: findings.filter((f) => f.severity === "low").length,
+        informational: findings.filter((f) => f.severity === "informational").length,
         total: findings.length,
     };
 
