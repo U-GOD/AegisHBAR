@@ -4,6 +4,7 @@ import "./globals.css";
 import { TopNav } from "../components/TopNav";
 import { Footer } from "../components/Footer";
 import { WalletProvider } from "../context/WalletContext";
+import { ToastProvider } from "../context/ToastContext";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -35,11 +36,13 @@ export default function RootLayout({
             </head>
             <body className="bg-background text-on-surface font-body-md min-h-screen flex flex-col selection:bg-primary/30">
                 <WalletProvider>
+                <ToastProvider>
                     <TopNav />
                     <div className="flex-1 flex flex-col w-full">
                         {children}
                     </div>
                     <Footer />
+                </ToastProvider>
                 </WalletProvider>
             </body>
         </html>
