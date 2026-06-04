@@ -5,7 +5,7 @@ import { useWallet } from "../context/WalletContext";
 import { AuditCategory } from "./CategorySelector";
 import { x402Client } from "@x402/core/client";
 import { ExactEvmScheme } from "@x402/evm/exact/client";
-import { x402Fetch } from "@x402/fetch";
+import { wrapFetchWithPayment } from "@x402/fetch";
 import { ethers } from "ethers";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
@@ -80,11 +80,14 @@ export function AuditStartButton({ sourceCode, categories, totalCost, onStatusCh
                 new ExactEvmScheme(evmSigner)
             );
 
-            // 3. Make the API request using x402Fetch
+            // 3. Make the API request using wrapped fetch
             // This will automatically intercept the 402 Payment Required response,
             // prompt the user to sign the transaction via MetaMask, and retry the request.
             updateStatus("submitting");
-            const response = await x402Fetch(`${BACKEND_URL}/api/audit`, {
+            
+            const fetchWithPay = wrapFetchWithPayment(window.fetch, client);
+            
+            const response = await fetchWithPay(`${BACKEND_URL}/api/audit`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -93,7 +96,6 @@ export function AuditStartButton({ sourceCode, categories, totalCost, onStatusCh
                     depositId,
                     depositor: address,
                 }),
-                client: client,
             });
 
             if (!response.ok) {
