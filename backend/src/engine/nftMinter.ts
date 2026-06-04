@@ -1,19 +1,11 @@
-import { ethers } from "ethers";
+import { TokenMintTransaction, TransferTransaction, AccountId } from "@hashgraph/sdk";
 import { AuditReport } from "./types";
+import { agentKit } from "../agent";
 
-const PRIVATE_KEY = process.env.HEDERA_PRIVATE_KEY || "";
-const CERTIFICATE_ADDRESS = process.env.AUDIT_CERTIFICATE_ADDRESS || "";
-
-// Use the public Hedera Hashio RPC for Testnet
-const provider = new ethers.JsonRpcProvider("https://testnet.hashio.io/api");
-
-const CERTIFICATE_ABI = [
-    "function mintCertificate(address recipient, string tokenURI_, tuple(bytes32 auditId, bytes32 contractHash, string hcsTopicId, uint256 totalFindings, uint256 criticalCount, uint256 highCount, uint256 mediumCount, uint256 lowCount, uint256 informationalCount, uint256 auditTimestamp) metadata) external returns (uint256 tokenId)",
-    "event CertificateMinted(uint256 indexed tokenId, bytes32 indexed auditId, address indexed recipient)"
-];
+const CERTIFICATE_TOKEN_ID = process.env.AUDIT_CERTIFICATE_TOKEN_ID || process.env.AUDIT_CERTIFICATE_ADDRESS || "";
 
 /**
- * Mints an Audit Certificate NFT (ERC721) on Hedera Testnet.
+ * Mints an Audit Certificate NFT (HTS) on Hedera Testnet.
  * @param recipientAddress The wallet address of the developer who requested the audit
  * @param tokenUri The IPFS URI containing the JSON metadata
  * @param report The full Audit Report
@@ -28,51 +20,50 @@ export async function mintAuditNFT(
     depositId: string, 
     hcsTopicId: string
 ): Promise<number> {
-    if (!PRIVATE_KEY || !CERTIFICATE_ADDRESS) {
-        throw new Error("Missing HEDERA_PRIVATE_KEY or AUDIT_CERTIFICATE_ADDRESS in environment variables.");
+    if (!CERTIFICATE_TOKEN_ID) {
+        throw new Error("Missing AUDIT_CERTIFICATE_TOKEN_ID in environment variables.");
     }
 
-    const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
-    const contract = new ethers.Contract(CERTIFICATE_ADDRESS, CERTIFICATE_ABI, wallet);
-
-    // Format strings as bytes32 for Solidity
-    const contractHashBytes32 = report.sourceHash.startsWith("0x") ? report.sourceHash : "0x" + report.sourceHash;
-    const auditIdBytes32 = depositId.startsWith("0x") ? depositId : "0x" + depositId;
-
-    const metadata = {
-        auditId: auditIdBytes32,
-        contractHash: contractHashBytes32,
-        hcsTopicId: hcsTopicId,
-        totalFindings: report.findings.length,
-        criticalCount: report.summary.critical,
-        highCount: report.summary.high,
-        mediumCount: report.summary.medium,
-        lowCount: report.summary.low,
-        informationalCount: report.summary.informational,
-        auditTimestamp: Math.floor(report.timestamp / 1000) // Convert JS ms timestamp to Unix seconds
-    };
-
-    console.log(`[NFT Minter] Minting certificate for ${recipientAddress}...`);
+    console.log(`[NFT Minter] Minting HTS certificate for ${recipientAddress}...`);
     
-    // Call the smart contract
-    const tx = await contract.mintCertificate(recipientAddress, tokenUri, metadata);
-    const receipt = await tx.wait();
+    const client = agentKit.client;
 
-    // Extract the tokenId from the emitted event
-    const event = receipt.logs.find((log: any) => {
-        try {
-            return contract.interface.parseLog(log)?.name === "CertificateMinted";
-        } catch { return false; }
-    });
+    const mintTx = new TokenMintTransaction()
+        .setTokenId(CERTIFICATE_TOKEN_ID)
+        .addMetadata(Buffer.from(tokenUri));
 
-    if (!event) {
-        throw new Error("Transaction succeeded, but CertificateMinted event was not found.");
+    const mintResponse = await mintTx.execute(client);
+    const mintReceipt = await mintResponse.getReceipt(client);
+    
+    if (!mintReceipt.serials || mintReceipt.serials.length === 0) {
+        throw new Error("Minting succeeded but no serial number was returned.");
+    }
+    
+    const serialNumber = mintReceipt.serials[0].toNumber();
+    console.log(`[NFT Minter] Successfully minted HTS Certificate Serial #${serialNumber}`);
+
+    try {
+        console.log(`[NFT Minter] Transferring Serial #${serialNumber} to ${recipientAddress}...`);
+        
+        let targetAccountId = recipientAddress;
+        
+        let targetAccountId = recipientAddress;
+
+        const transferTx = new TransferTransaction()
+            .addNftTransfer(
+                CERTIFICATE_TOKEN_ID, 
+                serialNumber, 
+                client.operatorAccountId!, 
+                AccountId.fromString(targetAccountId)
+            );
+        
+        const transferResponse = await transferTx.execute(client);
+        await transferResponse.getReceipt(client);
+        
+        console.log(`[NFT Minter] Transfer complete.`);
+    } catch (err: any) {
+        console.warn(`[NFT Minter] Transfer failed: ${err.message}`);
     }
 
-    const parsed = contract.interface.parseLog(event);
-    const tokenId = Number(parsed?.args[0]);
-
-    console.log(`[NFT Minter] Successfully minted Certificate #${tokenId}`);
-    
-    return tokenId;
+    return serialNumber;
 }
