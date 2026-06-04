@@ -1,4 +1,4 @@
-import { HederaAgentKit } from 'hedera-agent-kit';
+import { Client, PrivateKey } from '@hashgraph/sdk';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -11,8 +11,9 @@ if (!accountId || !privateKey) {
     throw new Error("Missing Hedera credentials in environment variables.");
 }
 
-export const agentKit = new HederaAgentKit(
-    accountId,
-    privateKey,
-    network
-);
+const hederaClient = network === "mainnet" ? Client.forMainnet() : Client.forTestnet();
+hederaClient.setOperator(accountId, PrivateKey.fromStringECDSA(privateKey));
+
+export const agentKit = {
+    client: hederaClient
+};
