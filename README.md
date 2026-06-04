@@ -72,8 +72,7 @@ Every finding is hashed and submitted as a JSON message to a dedicated Hedera Co
 ### Audit Certificate NFTs (HTS)
 Upon completion, a non-fungible token is minted via the Hedera Token Service containing the full audit metadata: contract hash, findings summary, HCS topic reference, severity counts, and timestamp. The NFT is transferable and verifiable by anyone.
 
-### On-Chain Escrow (HSCS)
-A custom Solidity escrow contract manages prepaid audit budgets. Unused funds are automatically refunded after a configurable timeout via Hedera Scheduled Transactions.
+
 
 ### AI-Powered Fix Suggestions
 For every vulnerability detected, the agent generates a patched code suggestion showing exactly how to remediate the issue, presented in a diff view alongside the original code.
@@ -209,7 +208,7 @@ sequenceDiagram
 ## User Flow
 
 **Step 1 — Connect Wallet**
-Connect a HashPack wallet via WalletConnect v2. The application supports both HBAR and USDC payments on Hedera Testnet.
+Connect a MetaMask wallet configured for the Hedera Testnet. The application supports HBAR payments via the x402 standard over EVM.
 
 **Step 2 — Upload Contract**
 Paste Solidity source code or upload a `.sol` file. The parser analyzes the contract and displays metrics: line count, function count, complexity score, and detected patterns.
@@ -238,7 +237,7 @@ After the audit completes, mint an Audit Certificate NFT in one click. The NFT a
 | Tailwind CSS | Utility-first styling |
 | Framer Motion | Animations and transitions |
 | Zustand | Client-side state management |
-| WalletConnect v2 | Wallet integration via `@hashgraph/hedera-wallet-connect` |
+| MetaMask | Wallet integration via standard EVM injected provider |
 
 ### Backend
 | Technology | Purpose |
@@ -345,9 +344,9 @@ curl -L https://foundry.paradigm.xyz | bash
 foundryup
 
 # Install contract dependencies
-cd packages/contracts
+cd contracts
 forge install
-cd ../..
+cd ..
 ```
 
 ### Environment Configuration
@@ -361,23 +360,31 @@ cp .env.example .env
 Required variables:
 
 ```bash
-# Hedera
+# Hedera Testnet Credentials (Agent Identity)
+HEDERA_ACCOUNT_ID=0.0.xxxxx
+HEDERA_PRIVATE_KEY=your_ecdsa_private_key_here
 HEDERA_NETWORK=testnet
-HEDERA_AGENT_ACCOUNT_ID=0.0.XXXXX
-HEDERA_AGENT_PRIVATE_KEY=302e...
-HCS_AUDIT_TOPIC_ID=0.0.XXXXX
-HTS_CERTIFICATE_TOKEN_ID=0.0.XXXXX
 
-# x402
-BLOCKY402_FACILITATOR_URL=https://api.blocky402.com/hedera/testnet
-AGENT_WALLET_ADDRESS=0.0.XXXXX
+# Smart Contracts (HTS & HSCS)
+AUDIT_ESCROW_ADDRESS=0x...
+AUDIT_REGISTRY_ADDRESS=0x...
+AUDIT_CERTIFICATE_TOKEN_ID=0.0.xxxxx
 
-# AI
-OPENAI_API_KEY=sk-...
+# Hedera Consensus Service
+HEDERA_HCS_TOPIC_ID=0.0.xxxxx
 
-# Frontend
-NEXT_PUBLIC_API_URL=http://localhost:3001
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=...
+# AI Provider Keys
+OPENAI_API_KEY=sk-proj-...
+
+# IPFS Pinning (Pinata)
+PINATA_API_KEY=
+PINATA_SECRET_API_KEY=
+
+# x402 Payment Facilitator
+X402_FACILITATOR_URL=https://x402.org/facilitator
+
+# Frontend (.env.local for the /frontend directory)
+NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
 NEXT_PUBLIC_HEDERA_NETWORK=testnet
 ```
 
@@ -390,14 +397,14 @@ See `.env.example` for the complete list of configuration options.
 npm run dev
 
 # Or start individually:
-npm run dev --workspace=packages/backend    # Backend on port 3001
-npm run dev --workspace=packages/frontend   # Frontend on port 3000
+cd backend && npm run dev    # Backend on port 3001
+cd frontend && npm run dev   # Frontend on port 3000
 ```
 
 ### Compiling and Deploying Contracts
 
 ```bash
-cd packages/contracts
+cd contracts
 
 # Compile
 forge build
@@ -416,7 +423,7 @@ forge script script/Deploy.s.sol --rpc-url https://testnet.hashio.io/api --broad
 ### Smart Contracts
 
 ```bash
-cd packages/contracts
+cd contracts
 forge test -vvv                    # Run all tests with verbose output
 forge test --match-test testDeposit # Run specific test
 forge coverage                     # Generate coverage report
@@ -425,7 +432,7 @@ forge coverage                     # Generate coverage report
 ### Backend
 
 ```bash
-cd packages/backend
+cd backend
 npm run test                       # Run unit tests
 npm run test:coverage              # Run with coverage
 npm run test:integration           # Run integration tests
@@ -434,7 +441,7 @@ npm run test:integration           # Run integration tests
 ### Frontend
 
 ```bash
-cd packages/frontend
+cd frontend
 npm run test                       # Run component tests
 npm run e2e                        # Run Playwright E2E tests
 ```
@@ -456,7 +463,7 @@ The frontend deploys automatically from the `main` branch via Vercel.
 
 ```bash
 # Manual deployment
-cd packages/frontend
+cd frontend
 npx vercel --prod
 ```
 
@@ -466,7 +473,7 @@ The backend runs as a containerized Express application on Railway.
 
 ```bash
 # Build the Docker image
-docker build -t aegishbar-backend ./packages/backend
+docker build -t aegishbar-backend ./backend
 
 # Deploy via Railway CLI
 railway up
@@ -484,31 +491,30 @@ railway up
 
 ```
 aegishbar/
-├── packages/
-│   ├── frontend/              Next.js 14 application
-│   │   ├── src/
-│   │   │   ├── app/           App Router pages
-│   │   │   ├── components/    React components
-│   │   │   ├── hooks/         Custom React hooks
-│   │   │   ├── lib/           Utilities and API client
-│   │   │   └── stores/        Zustand state stores
-│   │   └── public/            Static assets
-│   │
-│   ├── backend/               Express.js API server
-│   │   └── src/
-│   │       ├── config/        Environment and Hedera setup
-│   │       ├── middleware/    x402, auth, rate limiting
-│   │       ├── routes/        API route handlers
-│   │       ├── services/      Core business logic
-│   │       │   └── categories/  Per-category analyzers
-│   │       ├── agents/        Agent Kit orchestration
-│   │       ├── types/         TypeScript type definitions
-│   │       └── utils/         Shared utilities
-│   │
-│   └── contracts/             Solidity smart contracts
-│       ├── src/               Contract source files
-│       ├── test/              Foundry test suites
-│       └── script/            Deployment scripts
+├── frontend/              Next.js 14 application
+│   ├── src/
+│   │   ├── app/           App Router pages
+│   │   ├── components/    React components
+│   │   ├── hooks/         Custom React hooks
+│   │   ├── lib/           Utilities and API client
+│   │   └── stores/        Zustand state stores
+│   └── public/            Static assets
+│
+├── backend/               Express.js API server
+│   └── src/
+│       ├── config/        Environment and Hedera setup
+│       ├── middleware/    x402, auth, rate limiting
+│       ├── routes/        API route handlers
+│       ├── services/      Core business logic
+│       │   └── categories/  Per-category analyzers
+│       ├── agents/        Agent Kit orchestration
+│       ├── types/         TypeScript type definitions
+│       └── utils/         Shared utilities
+│
+└── contracts/             Solidity smart contracts
+    ├── src/               Contract source files
+    ├── test/              Foundry test suites
+    └── script/            Deployment scripts
 │
 ├── .github/workflows/         CI/CD pipeline
 ├── .env.example               Environment template
@@ -527,14 +533,19 @@ Every audit finding is submitted as a JSON message to a dedicated HCS topic. The
 ```json
 {
   "version": "1.0",
-  "auditId": "audit_abc123",
-  "findingIndex": 0,
-  "findingHash": "0xabcdef...",
-  "severity": "Critical",
-  "category": "reentrancy",
-  "title": "Reentrancy in withdraw()",
+  "contract": "MyContract",
+  "sourceHash": "0xabcdef...",
+  "reportHash": "0xabcdef...",
   "timestamp": 1717200000000,
-  "agent": "AegisHBAR-v1"
+  "summary": {
+    "critical": 1,
+    "high": 0,
+    "medium": 2,
+    "low": 0,
+    "informational": 5,
+    "total": 8
+  },
+  "riskScore": 59
 }
 ```
 
@@ -576,27 +587,22 @@ This enables true pay-per-use pricing without accounts, subscriptions, or API ke
 
 | Method | Path | Auth | Description |
 |:--|:--|:--|:--|
-| `POST` | `/api/audit/start` | None | Create a new audit session |
-| `POST` | `/api/audit/reentrancy` | x402 (5 HBAR) | Run reentrancy analysis |
-| `POST` | `/api/audit/access-control` | x402 (3 HBAR) | Run access control analysis |
-| `POST` | `/api/audit/overflow` | x402 (2 HBAR) | Run integer overflow analysis |
-| `POST` | `/api/audit/gas` | x402 (3 HBAR) | Run gas optimization analysis |
-| `POST` | `/api/audit/business-logic` | x402 (8 HBAR) | Run business logic analysis |
-| `POST` | `/api/audit/full` | x402 (15 HBAR) | Run all categories |
-| `GET` | `/api/audit/:id/stream` | None | SSE stream of findings |
-| `POST` | `/api/certificate/mint` | x402 (2 HBAR) | Mint audit certificate NFT |
-| `GET` | `/api/health` | None | Service health check |
+| `POST` | `/api/audit` | x402 (Variable based on selected categories) | Create a new audit session and trigger analysis |
+| `GET` | `/api/audit/stream/:depositId` | None | SSE stream of findings |
+| `GET` | `/api/certificate/:tokenId` | None | Retrieve certificate metadata and details |
+| `GET` | `/health` | None | Service health check |
 
 ### Request: Start Audit
 
 ```json
-POST /api/audit/start
+POST /api/audit
 Content-Type: application/json
 
 {
-  "contractSource": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.24;\n...",
-  "contractName": "MyContract",
-  "userAccountId": "0.0.12345"
+  "sourceCode": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.24;\n...",
+  "categories": ["reentrancy", "access"],
+  "depositId": "0x123abc...",
+  "depositor": "0x456def..."
 }
 ```
 
@@ -604,15 +610,8 @@ Content-Type: application/json
 
 ```json
 {
-  "auditId": "audit_a1b2c3d4",
-  "contractHash": "0xabcdef...",
-  "metrics": {
-    "lineCount": 142,
-    "functionCount": 8,
-    "complexityScore": 6,
-    "patterns": ["ERC20", "Ownable", "ReentrancyGuard"]
-  },
-  "streamUrl": "/api/audit/audit_a1b2c3d4/stream"
+  "success": true,
+  "depositId": "0x123abc..."
 }
 ```
 
