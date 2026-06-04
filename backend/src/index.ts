@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { SSEStreamManager } from "./engine/stream";
 import { runAuditPipeline } from "./engine/orchestrator";
 import { ethers } from "ethers";
+import { createX402Middleware } from "./middleware/x402";
 
 dotenv.config();
 
@@ -12,6 +13,9 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// x402 payment gate: returns HTTP 402 for unpaid requests to protected routes
+app.use(createX402Middleware());
 
 app.get("/health", (req: Request, res: Response) => {
     res.status(200).json({ status: "OK", service: "AegisHBAR Backend" });
@@ -28,8 +32,8 @@ app.post("/api/audit", async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Missing required fields" });
         }
 
-        // We mock x402 payment verification here for brevity.
-        // In production, we'd verify the depositId in the Escrow contract via ethers.js
+        // x402 middleware has already verified and settled the payment at this point.
+        // The request only reaches this handler if the client paid successfully.
 
         // Create a detached stream manager. 
         // It won't actually send events until the client connects to /api/audit/stream/:depositId
