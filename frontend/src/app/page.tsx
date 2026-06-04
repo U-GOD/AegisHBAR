@@ -1,177 +1,154 @@
-export default function DashboardPage() {
+"use client";
+
+import { useState } from "react";
+import { TopNav } from "../components/TopNav";
+import { ContractUploader } from "../components/ContractUploader";
+import { CategorySelector, defaultCategories } from "../components/CategorySelector";
+import { AuditStartButton, AuditStatus } from "../components/AuditStartButton";
+import { useAuditStream } from "../hooks/useAuditStream";
+import { FindingCard, Finding } from "../components/FindingCard";
+import { CertificateViewer } from "../components/CertificateViewer";
+
+export default function Home() {
+    const [sourceCode, setSourceCode] = useState("");
+    const [categories, setCategories] = useState(defaultCategories);
+    const [auditStatus, setAuditStatus] = useState<AuditStatus>("idle");
+    
+    const stream = useAuditStream();
+
+    const totalCost = 1.0 + categories.filter(c => c.selected).reduce((sum, c) => sum + c.cost, 0);
+
+    const handleStreamUrlReady = (url: string) => {
+        stream.startStream(url);
+    };
+
+    const reset = () => {
+        setSourceCode("");
+        setAuditStatus("idle");
+        stream.reset();
+    };
+
     return (
-        <main className="flex-1 p-margin-mobile md:p-margin-desktop max-w-container-max mx-auto w-full flex flex-col gap-gutter">
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-stack-md border-b border-outline-variant pb-stack-md">
-                <div>
-                    <h2 className="text-headline-lg-mobile md:text-headline-lg text-on-surface">
-                        Vault.sol Findings
-                    </h2>
-                    <p className="text-on-surface-variant text-body-md mt-2 flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[16px]">schedule</span>
-                        Scanned 2 hours ago • HCS Topic: 0.0.9109970
-                    </p>
-                </div>
-                <button className="bg-surface border border-outline text-on-surface py-2 px-4 rounded text-label-md hover:bg-surface-container transition-colors flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px]">download</span>
-                    Export Report
-                </button>
-            </div>
+        <main className="min-h-screen bg-background text-on-surface flex flex-col font-sans">
+            <TopNav />
+            
+            <div className="flex-1 container max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8 mt-16">
+                
+                {/* STATE 1: Not Auditing (Upload & Select) */}
+                {(!stream.isStreaming && !stream.report && auditStatus !== "streaming") && (
+                    <div className="flex flex-col gap-8 animate-fade-in">
+                        <div className="text-center mb-4 mt-8">
+                            <h1 className="text-display-md font-bold text-on-surface mb-4">
+                                Secure Your <span className="text-primary">Hedera</span> Smart Contracts
+                            </h1>
+                            <p className="text-body-lg text-on-surface-variant max-w-2xl mx-auto">
+                                AI-powered vulnerability detection with immutable, on-chain NFT audit certificates.
+                            </p>
+                        </div>
 
-            {/* Top Summary Row */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-stack-md">
-                {/* Risk Score */}
-                <div className="bg-surface border border-outline-variant p-stack-md flex flex-col justify-between h-32 relative overflow-hidden group hover:border-outline transition-colors">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-error"></div>
-                    <span className="text-label-sm text-on-surface-variant uppercase tracking-wider">
-                        Overall Risk Score
-                    </span>
-                    <div className="flex items-baseline gap-2">
-                        <span className="text-headline-lg text-error">78</span>
-                        <span className="text-label-md text-error">/ 100</span>
+                        <ContractUploader sourceCode={sourceCode} setSourceCode={setSourceCode} />
+                        
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div className="lg:col-span-2">
+                                <CategorySelector categories={categories} onChange={setCategories} />
+                            </div>
+                            <div className="flex flex-col gap-4">
+                                <div className="bg-surface border border-outline-variant rounded-xl p-6 h-full flex flex-col justify-center shadow-lg">
+                                    <h3 className="text-headline-sm font-bold mb-2">Ready to Scan</h3>
+                                    <p className="text-body-md text-on-surface-variant mb-6">
+                                        Your payment will be locked in an escrow smart contract and only consumed once the analysis is complete.
+                                    </p>
+                                    <AuditStartButton 
+                                        sourceCode={sourceCode}
+                                        categories={categories}
+                                        totalCost={totalCost}
+                                        onStatusChange={setAuditStatus}
+                                        onStreamUrl={handleStreamUrlReady}
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                )}
 
-                {/* Critical */}
-                <div className="bg-surface border border-outline-variant p-stack-md flex flex-col justify-between h-32 hover:border-outline transition-colors">
-                    <span className="text-label-sm text-on-surface-variant uppercase tracking-wider flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-error"></span> Critical
-                    </span>
-                    <span className="text-headline-lg text-error">2</span>
-                </div>
+                {/* STATE 2: Streaming Progress */}
+                {(stream.isStreaming || auditStatus === "streaming") && !stream.report && (
+                    <div className="flex flex-col gap-8 items-center justify-center flex-1 animate-fade-in my-auto">
+                        <div className="w-full max-w-2xl bg-surface border border-outline-variant rounded-xl p-8 shadow-lg">
+                            <div className="flex items-center gap-6 mb-8">
+                                <div className="relative flex items-center justify-center w-16 h-16">
+                                    <div className="absolute inset-0 rounded-full border-4 border-primary/20"></div>
+                                    <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+                                    <span className="material-symbols-outlined text-primary text-[24px]">troubleshoot</span>
+                                </div>
+                                <div>
+                                    <h2 className="text-headline-md font-bold text-on-surface">Auditing in Progress...</h2>
+                                    <p className="text-body-lg text-primary font-bold uppercase tracking-wide mt-1">
+                                        {stream.currentPhase?.replace('-', ' ') || "Initializing Engine..."}
+                                    </p>
+                                </div>
+                            </div>
 
-                {/* High */}
-                <div className="bg-surface border border-outline-variant p-stack-md flex flex-col justify-between h-32 hover:border-outline transition-colors">
-                    <span className="text-label-sm text-on-surface-variant uppercase tracking-wider flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-tertiary"></span> High
-                    </span>
-                    <span className="text-headline-lg text-tertiary">5</span>
-                </div>
-
-                {/* Medium/Low */}
-                <div className="bg-surface border border-outline-variant p-stack-md flex flex-col justify-between h-32 hover:border-outline transition-colors">
-                    <span className="text-label-sm text-on-surface-variant uppercase tracking-wider flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-secondary"></span> Med / Low
-                    </span>
-                    <span className="text-headline-lg text-secondary">14</span>
-                </div>
-            </div>
-
-            {/* Findings List */}
-            <div className="bg-surface border border-outline-variant flex flex-col">
-                <div className="grid grid-cols-12 gap-4 p-stack-md border-b border-outline-variant bg-surface-container-low text-label-sm text-on-surface-variant uppercase">
-                    <div className="col-span-2">Severity</div>
-                    <div className="col-span-6">Vulnerability Title</div>
-                    <div className="col-span-2">Line No.</div>
-                    <div className="col-span-2 text-right">Action</div>
-                </div>
-
-                {/* Expanded Item (Mock) */}
-                <div className="border-b border-outline-variant bg-surface-container-lowest">
-                    <div className="grid grid-cols-12 gap-4 p-stack-md items-center">
-                        <div className="col-span-2">
-                            <span className="inline-flex items-center px-2 py-1 rounded bg-error/15 border border-error/30 text-error text-label-sm uppercase">
-                                Critical
-                            </span>
+                            <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-6 h-72 overflow-y-auto font-mono text-label-sm flex flex-col gap-3 shadow-inner">
+                                {stream.events.map((evt, idx) => (
+                                    <div key={idx} className="flex gap-4 items-start">
+                                        <span className="text-primary/60 shrink-0">[{new Date().toLocaleTimeString()}]</span>
+                                        <span className={evt.phase === "error" ? "text-error font-bold" : "text-on-surface-variant"}>
+                                            {evt.message}
+                                        </span>
+                                    </div>
+                                ))}
+                                {/* Auto-scroll dummy element could go here */}
+                            </div>
+                            
+                            {stream.error && (
+                                <div className="mt-6 text-center">
+                                    <button onClick={reset} className="text-error hover:underline font-bold text-label-md">
+                                        Reset and Try Again
+                                    </button>
+                                </div>
+                            )}
                         </div>
-                        <div className="col-span-6 text-on-surface text-label-md">
-                            Reentrancy in withdrawBalance()
-                        </div>
-                        <div className="col-span-2 text-on-surface-variant text-label-md">
-                            L: 142
-                        </div>
-                        <div className="col-span-2 text-right">
-                            <button className="text-primary hover:text-primary-fixed transition-colors text-label-sm uppercase tracking-wider flex items-center justify-end w-full gap-1">
-                                Hide Fix <span className="material-symbols-outlined text-[16px]">expand_less</span>
+                    </div>
+                )}
+
+                {/* STATE 3: Complete (Dashboard & Certificate View) */}
+                {stream.report && (
+                    <div className="flex flex-col gap-8 animate-fade-in">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-display-sm font-bold text-on-surface">Audit Results</h2>
+                            <button onClick={reset} className="text-label-md font-bold text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2">
+                                <span className="material-symbols-outlined text-[18px]">refresh</span>
+                                Start New Audit
                             </button>
                         </div>
-                    </div>
 
-                    {/* Code Diff Expansion */}
-                    <div className="px-stack-md pb-stack-md">
-                        <div className="bg-background border border-outline-variant rounded overflow-hidden text-label-md">
-                            <div className="flex text-on-surface-variant border-b border-outline-variant bg-surface-container-low px-4 py-2 text-label-sm uppercase">
-                                <span className="material-symbols-outlined text-[14px] mr-2">code</span> Vault.sol
+                        {/* The Immutable Certificate Card */}
+                        <CertificateViewer 
+                            report={stream.report} 
+                            certificate={stream.report.certificate || (stream.events[stream.events.length - 1]?.data?.certificate)} 
+                        />
+
+                        {/* Detailed Findings List */}
+                        <div className="bg-surface border border-outline-variant rounded-xl overflow-hidden shadow-sm mt-4">
+                            <div className="bg-surface-container-high px-6 py-4 border-b border-outline-variant flex justify-between items-center">
+                                <h3 className="text-headline-sm font-bold text-on-surface">Identified Vulnerabilities ({stream.report.findings.length})</h3>
                             </div>
                             <div className="flex flex-col">
-                                {/* Context */}
-                                <div className="flex hover:bg-surface-container-lowest transition-colors group">
-                                    <div className="w-12 border-r border-outline-variant text-right pr-2 py-1 text-on-surface-variant/50 select-none bg-surface-container-low">141</div>
-                                    <div className="w-12 border-r border-outline-variant text-right pr-2 py-1 text-on-surface-variant/50 select-none bg-surface-container-low group-hover:bg-surface-container-lowest">141</div>
-                                    <div className="pl-4 py-1 text-on-surface-variant"><span className="text-primary">function</span> <span className="text-inverse-primary">withdrawBalance</span>() <span className="text-primary">public</span> {"{"}</div>
-                                </div>
-                                {/* Removed Line */}
-                                <div className="flex bg-error/10 hover:bg-error/20 transition-colors">
-                                    <div className="w-12 border-r border-outline-variant border-error/20 text-right pr-2 py-1 text-error/70 select-none bg-error/5">142</div>
-                                    <div className="w-12 border-r border-outline-variant text-right pr-2 py-1 select-none"></div>
-                                    <div className="pl-4 py-1 text-error line-through decoration-error/50"><span className="text-error/70">-</span> (bool success, ) = msg.sender.call{"{value: balances[msg.sender]}"}("");</div>
-                                </div>
-                                {/* Added Lines */}
-                                <div className="flex bg-primary/10 hover:bg-primary/20 transition-colors">
-                                    <div className="w-12 border-r border-outline-variant text-right pr-2 py-1 select-none"></div>
-                                    <div className="w-12 border-r border-outline-variant border-primary/20 text-right pr-2 py-1 text-primary/70 select-none bg-primary/5">142</div>
-                                    <div className="pl-4 py-1 text-primary"><span className="text-primary/70">+</span> uint256 amount = balances[msg.sender];</div>
-                                </div>
-                                <div className="flex bg-primary/10 hover:bg-primary/20 transition-colors">
-                                    <div className="w-12 border-r border-outline-variant text-right pr-2 py-1 select-none"></div>
-                                    <div className="w-12 border-r border-outline-variant border-primary/20 text-right pr-2 py-1 text-primary/70 select-none bg-primary/5">143</div>
-                                    <div className="pl-4 py-1 text-primary"><span className="text-primary/70">+</span> balances[msg.sender] = 0;</div>
-                                </div>
-                                <div className="flex bg-primary/10 hover:bg-primary/20 transition-colors">
-                                    <div className="w-12 border-r border-outline-variant text-right pr-2 py-1 select-none"></div>
-                                    <div className="w-12 border-r border-outline-variant border-primary/20 text-right pr-2 py-1 text-primary/70 select-none bg-primary/5">144</div>
-                                    <div className="pl-4 py-1 text-primary"><span className="text-primary/70">+</span> (bool success, ) = msg.sender.call{"{value: amount}"}("");</div>
-                                </div>
-                                {/* Context */}
-                                <div className="flex hover:bg-surface-container-lowest transition-colors group">
-                                    <div className="w-12 border-r border-outline-variant text-right pr-2 py-1 text-on-surface-variant/50 select-none bg-surface-container-low">143</div>
-                                    <div className="w-12 border-r border-outline-variant text-right pr-2 py-1 text-on-surface-variant/50 select-none bg-surface-container-low group-hover:bg-surface-container-lowest">145</div>
-                                    <div className="pl-4 py-1 text-on-surface-variant"><span className="text-secondary">require</span>(success, <span className="text-tertiary">"Transfer failed"</span>);</div>
-                                </div>
+                                {stream.report.findings.length === 0 ? (
+                                    <div className="p-8 text-center text-on-surface-variant flex flex-col items-center gap-2">
+                                        <span className="material-symbols-outlined text-[48px] text-primary/50">verified_user</span>
+                                        <p className="text-body-lg">No vulnerabilities detected. Excellent work!</p>
+                                    </div>
+                                ) : (
+                                    stream.report.findings.map((finding: Finding) => (
+                                        <FindingCard key={finding.id} finding={finding} fileName={`${stream.report.contractName}.sol`} />
+                                    ))
+                                )}
                             </div>
                         </div>
                     </div>
-                </div>
-
-                {/* Normal Item */}
-                <div className="grid grid-cols-12 gap-4 p-stack-md items-center border-b border-outline-variant hover:bg-surface-container-lowest transition-colors cursor-pointer group">
-                    <div className="col-span-2">
-                        <span className="inline-flex items-center px-2 py-1 rounded bg-tertiary/15 border border-tertiary/30 text-tertiary text-label-sm uppercase">
-                            High
-                        </span>
-                    </div>
-                    <div className="col-span-6 text-on-surface text-label-md">
-                        Unchecked Call Return Value
-                    </div>
-                    <div className="col-span-2 text-on-surface-variant text-label-md">
-                        L: 89
-                    </div>
-                    <div className="col-span-2 text-right">
-                        <button className="text-on-surface-variant group-hover:text-primary transition-colors text-label-sm uppercase tracking-wider flex items-center justify-end w-full gap-1">
-                            View Fix <span className="material-symbols-outlined text-[16px] opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
-                        </button>
-                    </div>
-                </div>
-
-                {/* Normal Item */}
-                <div className="grid grid-cols-12 gap-4 p-stack-md items-center hover:bg-surface-container-lowest transition-colors cursor-pointer group">
-                    <div className="col-span-2">
-                        <span className="inline-flex items-center px-2 py-1 rounded bg-primary/15 border border-primary/30 text-primary text-label-sm uppercase">
-                            Low
-                        </span>
-                    </div>
-                    <div className="col-span-6 text-on-surface text-label-md">
-                        Gas Optimization: Use calldata
-                    </div>
-                    <div className="col-span-2 text-on-surface-variant text-label-md">
-                        L: 45
-                    </div>
-                    <div className="col-span-2 text-right">
-                        <button className="text-on-surface-variant group-hover:text-primary transition-colors text-label-sm uppercase tracking-wider flex items-center justify-end w-full gap-1">
-                            View Fix <span className="material-symbols-outlined text-[16px] opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
-                        </button>
-                    </div>
-                </div>
+                )}
             </div>
         </main>
     );
