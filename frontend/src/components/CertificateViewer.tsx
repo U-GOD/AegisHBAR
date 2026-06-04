@@ -21,6 +21,16 @@ export function CertificateViewer({ report, certificate }: CertificateViewerProp
 
     const hashscanUrl = `https://hashscan.io/testnet/token/${CERTIFICATE_ADDRESS}?p=1&k=${certificate.tokenId}`;
 
+    const downloadJsonReport = () => {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(report, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href",     dataStr);
+        downloadAnchorNode.setAttribute("download", `${report.contractName}_AuditReport.json`);
+        document.body.appendChild(downloadAnchorNode); // required for firefox
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    };
+
     return (
         <div className="bg-surface border border-outline-variant rounded-xl p-stack-lg overflow-hidden relative">
             {/* Background Glow */}
@@ -107,9 +117,17 @@ export function CertificateViewer({ report, certificate }: CertificateViewerProp
                     rel="noreferrer"
                     className="w-full sm:w-auto px-6 py-3 rounded-lg bg-primary hover:bg-primary/90 transition-colors text-background font-bold text-label-md flex justify-center items-center gap-2 shadow-[0_0_20px_rgba(var(--primary),0.4)]"
                 >
-                    <span className="material-symbols-outlined text-[20px]">download</span>
-                    Download PDF Report
+                    <span className="material-symbols-outlined text-[20px]">picture_as_pdf</span>
+                    Download PDF
                 </a>
+
+                <button 
+                    onClick={downloadJsonReport}
+                    className="w-full sm:w-auto px-6 py-3 rounded-lg bg-surface-container-high hover:bg-surface-container-highest transition-colors text-on-surface font-bold text-label-md border border-outline-variant flex justify-center items-center gap-2"
+                >
+                    <span className="material-symbols-outlined text-[20px]">data_object</span>
+                    Export JSON
+                </button>
             </div>
         </div>
     );
