@@ -13,11 +13,13 @@
   "dependencies": {
     "@hashgraph/sdk": "^2.81.0",
     "@solidity-parser/parser": "^0.20.2",
+    "@types/pdfkit": "^0.17.6",
     "@x402/express": "^2.14.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "hedera-agent-kit": "^3.8.2"
+    "hedera-agent-kit": "^3.8.2",
+    "pdfkit": "^0.18.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
