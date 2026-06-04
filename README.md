@@ -54,7 +54,6 @@ The platform combines deterministic static analysis with LLM-powered deep reason
 | Resource | Link |
 |:--|:--|
 | Web Application | [aegishbar.vercel.app](https://aegishbar.vercel.app) |
-| Demo Video | [YouTube](https://youtube.com/watch?v=XXXXX) |
 | Deployed Contracts | [Hashscan (Testnet)](https://hashscan.io/testnet) |
 
 ---
