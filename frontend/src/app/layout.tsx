@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Sidebar } from "../components/Sidebar";
 import { TopNav } from "../components/TopNav";
 import { Footer } from "../components/Footer";
 import { WalletProvider } from "../context/WalletContext";
@@ -31,14 +30,16 @@ export default function RootLayout({
             lang="en"
             className={`${geistSans.variable} ${geistMono.variable} dark antialiased`}
         >
-            <body className="bg-background text-on-surface font-body-md min-h-screen flex selection:bg-primary/30">
+            <head>
+                <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet" />
+            </head>
+            <body className="bg-background text-on-surface font-body-md min-h-screen flex flex-col selection:bg-primary/30">
                 <WalletProvider>
-                    <Sidebar />
-                    <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
-                        <TopNav />
+                    <TopNav />
+                    <div className="flex-1 flex flex-col w-full">
                         {children}
-                        <Footer />
                     </div>
+                    <Footer />
                 </WalletProvider>
             </body>
         </html>
