@@ -4,6 +4,7 @@ import "./globals.css";
 import { Sidebar } from "../components/Sidebar";
 import { TopNav } from "../components/TopNav";
 import { Footer } from "../components/Footer";
+import { WalletProvider } from "../context/WalletContext";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -31,12 +32,14 @@ export default function RootLayout({
             className={`${geistSans.variable} ${geistMono.variable} dark antialiased`}
         >
             <body className="bg-background text-on-surface font-body-md min-h-screen flex selection:bg-primary/30">
-                <Sidebar />
-                <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
-                    <TopNav />
-                    {children}
-                    <Footer />
-                </div>
+                <WalletProvider>
+                    <Sidebar />
+                    <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
+                        <TopNav />
+                        {children}
+                        <Footer />
+                    </div>
+                </WalletProvider>
             </body>
         </html>
     );
