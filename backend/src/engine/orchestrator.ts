@@ -6,72 +6,125 @@ import { analyzeAccessControl } from "./analyzers/accessControl";
 import { analyzeOverflow } from "./analyzers/overflow";
 import { analyzeGas } from "./analyzers/gas";
 import { analyzeLogic } from "./analyzers/logic";
+import { generateFixSuggestion } from "./suggester";
+import { SSEStreamManager } from "./stream";
+import { logReportToHCS } from "./hcsLogger";
+import { generatePdfReport } from "./pdfGenerator";
+import { uploadFileToIPFS, uploadMetadataToIPFS } from "./ipfs";
+import { mintAuditNFT } from "./nftMinter";
 
 /**
- * Central orchestrator for the AI-driven smart contract analysis pipeline.
- * Takes raw Solidity source code, decomposes it via the AST parser,
- * dispatches each relevant node to the appropriate category analyzer,
- * and aggregates results into a structured audit report.
+ * Executes the complete AegisHBAR audit pipeline.
  */
-export class AnalysisEngine {
-    private sourceCode: string;
-    private contractName: string;
-
-    constructor(sourceCode: string, contractName: string) {
-        this.sourceCode = sourceCode;
-        this.contractName = contractName;
-    }
-
-    async run(): Promise<AuditReport> {
-        const ast = parseSolidityCode(this.sourceCode);
+export async function runAuditPipeline(
+    sourceCode: string,
+    contractName: string,
+    categories: string[],
+    depositorAddress: string,
+    depositId: string,
+    stream: SSEStreamManager
+): Promise<void> {
+    try {
+        stream.send("parsing", "Parsing Solidity AST...");
+        const ast = parseSolidityCode(sourceCode);
         const findings: Finding[] = [];
 
+        // 1. Static Analysis
+        stream.send("analyzing", "Running static analysis modules...");
         for (const node of ast.children) {
             if (node.type === "ContractDefinition") {
-                const contractFindings = this.analyzeContract(node);
-                findings.push(...contractFindings);
+                if (categories.includes("reentrancy")) findings.push(...analyzeReentrancy(node));
+                if (categories.includes("access")) findings.push(...analyzeAccessControl(node));
+                if (categories.includes("overflow")) findings.push(...analyzeOverflow(node));
+                if (categories.includes("gas")) findings.push(...analyzeGas(node));
+                if (categories.includes("logic")) findings.push(...analyzeLogic(node));
             }
         }
 
-        return this.buildReport(findings);
+        // 2. AI Fix Suggestions
+        stream.send("generating-fixes", "Generating AI fix suggestions...");
+        for (const finding of findings) {
+            try {
+                finding.fixSuggestion = await generateFixSuggestion(finding, sourceCode);
+            } catch (err) {
+                console.warn(`Failed to generate fix for finding ${finding.id}`, err);
+            }
+        }
+
+        const report = buildReport(sourceCode, contractName, findings);
+
+        // 3. Log to Hedera Consensus Service
+        stream.send("logging-hcs", "Logging immutable audit report to HCS...");
+        let hcsTopicId = "";
+        try {
+            hcsTopicId = await logReportToHCS(report);
+        } catch (err) {
+            console.error("HCS logging failed:", err);
+            hcsTopicId = "failed-to-log";
+        }
+
+        // 4. Generate PDF
+        stream.send("analyzing", "Generating PDF report...");
+        const pdfBuffer = await generatePdfReport(report);
+
+        // 5. Upload to IPFS via Pinata
+        stream.send("analyzing", "Pinning report to IPFS...");
+        let pdfIpfsUri = "";
+        let metadataIpfsUri = "";
+        try {
+            pdfIpfsUri = await uploadFileToIPFS(pdfBuffer, `${contractName}_Audit.pdf`);
+            metadataIpfsUri = await uploadMetadataToIPFS(report, pdfIpfsUri);
+        } catch (err) {
+            console.error("IPFS upload failed:", err);
+            metadataIpfsUri = "ipfs://error";
+        }
+
+        // 6. Mint NFT
+        stream.send("analyzing", "Minting Audit Certificate NFT...");
+        let tokenId = 0;
+        try {
+            tokenId = await mintAuditNFT(depositorAddress, metadataIpfsUri, report, depositId, hcsTopicId);
+        } catch (err) {
+            console.error("NFT Minting failed:", err);
+        }
+
+        stream.send("complete", "Audit pipeline finished successfully.", {
+            report,
+            certificate: {
+                tokenId,
+                hcsTopicId,
+                metadataUri: metadataIpfsUri,
+                pdfUri: pdfIpfsUri
+            }
+        });
+
+    } catch (error: any) {
+        stream.error(error.message || "An unexpected error occurred during the audit pipeline.");
     }
+}
 
-    private analyzeContract(contractNode: any): Finding[] {
-        const findings: Finding[] = [];
+function buildReport(sourceCode: string, contractName: string, findings: Finding[]): AuditReport {
+    const summary = {
+        critical: findings.filter((f) => f.severity === "Critical").length,
+        high: findings.filter((f) => f.severity === "High").length,
+        medium: findings.filter((f) => f.severity === "Medium").length,
+        low: findings.filter((f) => f.severity === "Low").length,
+        informational: findings.filter((f) => f.severity === "Info").length,
+        total: findings.length,
+    };
 
-        findings.push(...analyzeReentrancy(contractNode));
-        findings.push(...analyzeAccessControl(contractNode));
-        findings.push(...analyzeOverflow(contractNode));
-        findings.push(...analyzeGas(contractNode));
-        findings.push(...analyzeLogic(contractNode));
+    const riskScore = Math.max(0, 100 - (
+        summary.critical * 25 + summary.high * 15 + summary.medium * 8 + summary.low * 3
+    ));
 
-        return findings;
-    }
+    const sourceHash = crypto.createHash("sha256").update(sourceCode).digest("hex");
 
-    private buildReport(findings: Finding[]): AuditReport {
-        const summary = {
-            critical: findings.filter((f) => f.severity === "critical").length,
-            high: findings.filter((f) => f.severity === "high").length,
-            medium: findings.filter((f) => f.severity === "medium").length,
-            low: findings.filter((f) => f.severity === "low").length,
-            informational: findings.filter((f) => f.severity === "informational").length,
-            total: findings.length,
-        };
-
-        const riskScore = Math.min(
-            100,
-            summary.critical * 25 + summary.high * 15 + summary.medium * 8 + summary.low * 3
-        );
-
-        const sourceHash = crypto.createHash("sha256").update(this.sourceCode).digest("hex");
-
-        return {
-            contractName: this.contractName,
-            sourceHash,
-            timestamp: Date.now(),
-            findings,
-            summary,
-            overallRiskScore: riskScore,
-        };
-    }
+    return {
+        contractName,
+        sourceHash,
+        timestamp: Date.now(),
+        findings,
+        summary,
+        overallRiskScore: riskScore,
+    };
 }
