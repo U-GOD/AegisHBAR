@@ -15,9 +15,11 @@
     "@solidity-parser/parser": "^0.20.2",
     "@types/pdfkit": "^0.17.6",
     "@x402/express": "^2.14.0",
+    "axios": "^1.17.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "form-data": "^4.0.5",
     "hedera-agent-kit": "^3.8.2",
     "pdfkit": "^0.18.0"
   },
