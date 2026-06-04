@@ -1,23 +1,7 @@
-import { Client, TopicMessageSubmitTransaction, PrivateKey } from "@hashgraph/sdk";
+import { TopicMessageSubmitTransaction } from "@hashgraph/sdk";
 import crypto from "crypto";
 import { AuditReport } from "./types";
-
-let client: Client | null = null;
-
-function getClient(): Client {
-    if (client) return client;
-
-    const accountId = process.env.HEDERA_ACCOUNT_ID || "";
-    const privateKey = process.env.HEDERA_PRIVATE_KEY || "";
-
-    if (!accountId || !privateKey) {
-        throw new Error("Missing Hedera credentials for HCS logging.");
-    }
-
-    client = Client.forTestnet();
-    client.setOperator(accountId, PrivateKey.fromStringECDSA(privateKey));
-    return client;
-}
+import { agentKit } from "../agent";
 
 /**
  * Publishes a compact audit summary to the Hedera Consensus Service topic.
@@ -46,7 +30,7 @@ export async function logFindingsToHCS(report: AuditReport): Promise<string> {
     });
 
     try {
-        const hederaClient = getClient();
+        const hederaClient = agentKit.client;
 
         const tx = new TopicMessageSubmitTransaction()
             .setTopicId(topicId)
