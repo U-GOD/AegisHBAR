@@ -1,9 +1,20 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useWallet } from "../context/WalletContext";
 
 export function TopNav() {
     const { address, isConnected, connect, disconnect } = useWallet();
+    const pathname = usePathname();
+
+    const navItems = [
+        { name: "Audits", path: "/" },
+        { name: "Reports", path: "/reports" },
+        { name: "Scan", path: "/scan" },
+        { name: "Documentation", path: "/docs" },
+    ];
+
     return (
         <header className="bg-background w-full top-0 border-b border-outline-variant">
             <div className="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop h-16 max-w-container-max mx-auto">
@@ -14,18 +25,22 @@ export function TopNav() {
                     AegisHBAR
                 </div>
                 <div className="hidden md:flex gap-gutter h-full items-end pt-2">
-                    <a className="text-primary border-b-2 border-primary pb-1 transition-colors duration-200 text-label-md mb-[-1px]" href="/">
-                        Audits
-                    </a>
-                    <a className="text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors duration-200 text-label-md pb-1 mb-[-1px] px-2 rounded-t" href="/reports">
-                        Reports
-                    </a>
-                    <a className="text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors duration-200 text-label-md pb-1 mb-[-1px] px-2 rounded-t" href="/scan">
-                        Scan
-                    </a>
-                    <a className="text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors duration-200 text-label-md pb-1 mb-[-1px] px-2 rounded-t" href="/docs">
-                        Documentation
-                    </a>
+                    {navItems.map((item) => {
+                        const isActive = pathname === item.path;
+                        return (
+                            <Link 
+                                key={item.path}
+                                href={item.path}
+                                className={
+                                    isActive 
+                                    ? "text-primary border-b-2 border-primary pb-1 transition-colors duration-200 text-label-md mb-[-1px]"
+                                    : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors duration-200 text-label-md pb-1 mb-[-1px] px-2 rounded-t"
+                                }
+                            >
+                                {item.name}
+                            </Link>
+                        );
+                    })}
                 </div>
                 <div className="flex items-center gap-stack-md">
                     {!isConnected ? (
