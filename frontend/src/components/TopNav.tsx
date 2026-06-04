@@ -14,16 +14,16 @@ export function TopNav() {
                     AegisHBAR
                 </div>
                 <div className="hidden md:flex gap-gutter h-full items-end pt-2">
-                    <a className="text-primary border-b-2 border-primary pb-1 transition-colors duration-200 text-label-md mb-[-1px]" href="#">
+                    <a className="text-primary border-b-2 border-primary pb-1 transition-colors duration-200 text-label-md mb-[-1px]" href="/">
                         Audits
                     </a>
-                    <a className="text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors duration-200 text-label-md pb-1 mb-[-1px] px-2 rounded-t" href="#">
+                    <a className="text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors duration-200 text-label-md pb-1 mb-[-1px] px-2 rounded-t" href="/reports">
                         Reports
                     </a>
-                    <a className="text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors duration-200 text-label-md pb-1 mb-[-1px] px-2 rounded-t" href="#">
+                    <a className="text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors duration-200 text-label-md pb-1 mb-[-1px] px-2 rounded-t" href="/scan">
                         Scan
                     </a>
-                    <a className="text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors duration-200 text-label-md pb-1 mb-[-1px] px-2 rounded-t" href="#">
+                    <a className="text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors duration-200 text-label-md pb-1 mb-[-1px] px-2 rounded-t" href="/docs">
                         Documentation
                     </a>
                 </div>
