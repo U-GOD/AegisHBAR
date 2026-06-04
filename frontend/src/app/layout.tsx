@@ -1,21 +1,23 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Sidebar } from "../components/Sidebar";
+import { TopNav } from "../components/TopNav";
+import { Footer } from "../components/Footer";
 
-const inter = Inter({
+const geistSans = Geist({
     variable: "--font-geist-sans",
     subsets: ["latin"],
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const geistMono = Geist_Mono({
     variable: "--font-geist-mono",
     subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-    title: "AegisHBAR - AI-Powered Smart Contract Auditor",
-    description:
-        "Automated security analysis for Solidity smart contracts on Hedera. Pay-per-audit with x402 micropayments, immutable findings on HCS, and NFT-certified reports.",
+    title: "AegisHBAR - Findings Dashboard",
+    description: "Enterprise Smart Contract Auditor secured by Hedera.",
 };
 
 export default function RootLayout({
@@ -26,9 +28,16 @@ export default function RootLayout({
     return (
         <html
             lang="en"
-            className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+            className={`${geistSans.variable} ${geistMono.variable} dark antialiased`}
         >
-            <body className="min-h-full flex flex-col">{children}</body>
+            <body className="bg-background text-on-surface font-body-md min-h-screen flex selection:bg-primary/30">
+                <Sidebar />
+                <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
+                    <TopNav />
+                    {children}
+                    <Footer />
+                </div>
+            </body>
         </html>
     );
 }
