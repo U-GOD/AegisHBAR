@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { SSEStreamManager } from "./engine/stream";
 import { runAuditPipeline } from "./engine/orchestrator";
+import { ethers } from "ethers";
 
 dotenv.config();
 
@@ -63,6 +64,50 @@ app.get("/api/audit/stream/:depositId", (req: Request, res: Response) => {
 
     // Attach the actual response object to the stream manager to begin pushing SSE events
     streamManager.attachResponse(res);
+});
+
+app.get("/api/certificate/:tokenId", async (req: Request, res: Response) => {
+    try {
+        const { tokenId } = req.params;
+        const provider = new ethers.JsonRpcProvider("https://testnet.hashio.io/api");
+        const CERTIFICATE_ADDRESS = process.env.AUDIT_CERTIFICATE_ADDRESS || "";
+        
+        if (!CERTIFICATE_ADDRESS) {
+            return res.status(500).json({ error: "Certificate address not configured" });
+        }
+
+        const ABI = [
+            "function getCertificateMetadata(uint256 tokenId) external view returns (tuple(bytes32 auditId, bytes32 contractHash, string hcsTopicId, uint256 totalFindings, uint256 criticalCount, uint256 highCount, uint256 mediumCount, uint256 lowCount, uint256 informationalCount, uint256 auditTimestamp))",
+            "function ownerOf(uint256 tokenId) external view returns (address)"
+        ];
+
+        const contract = new ethers.Contract(CERTIFICATE_ADDRESS, ABI, provider);
+        
+        // Ensure it exists first (ownerOf throws if it doesn't)
+        const owner = await contract.ownerOf(tokenId);
+        const metadata = await contract.getCertificateMetadata(tokenId);
+
+        res.status(200).json({
+            tokenId,
+            owner,
+            auditId: metadata.auditId,
+            contractHash: metadata.contractHash,
+            hcsTopicId: metadata.hcsTopicId,
+            totalFindings: Number(metadata.totalFindings),
+            criticalCount: Number(metadata.criticalCount),
+            highCount: Number(metadata.highCount),
+            mediumCount: Number(metadata.mediumCount),
+            lowCount: Number(metadata.lowCount),
+            informationalCount: Number(metadata.informationalCount),
+            auditTimestamp: Number(metadata.auditTimestamp) * 1000 // Convert back to ms
+        });
+
+    } catch (error: any) {
+        if (error.message.includes("ERC721NonexistentToken") || error.message.includes("invalid token ID")) {
+            return res.status(404).json({ error: "Certificate not found or invalid" });
+        }
+        res.status(500).json({ error: error.message });
+    }
 });
 
 app.listen(PORT, () => {
