@@ -1,4 +1,9 @@
+"use client";
+
+import { useWallet } from "../context/WalletContext";
+
 export function TopNav() {
+    const { address, isConnected, connect, disconnect } = useWallet();
     return (
         <header className="bg-background w-full top-0 border-b border-outline-variant">
             <div className="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop h-16 max-w-container-max mx-auto">
@@ -23,9 +28,19 @@ export function TopNav() {
                     </a>
                 </div>
                 <div className="flex items-center gap-stack-md">
-                    <button className="hidden md:flex bg-transparent border border-outline text-on-surface py-1.5 px-4 rounded text-label-md hover:bg-surface-container transition-colors items-center gap-2">
-                        Connect Wallet
-                    </button>
+                    {!isConnected ? (
+                        <button 
+                            onClick={connect}
+                            className="hidden md:flex bg-transparent border border-outline text-on-surface py-1.5 px-4 rounded text-label-md hover:bg-surface-container transition-colors items-center gap-2"
+                        >
+                            Connect Wallet
+                        </button>
+                    ) : (
+                        <div className="hidden md:flex items-center gap-2 bg-surface-container border border-outline-variant py-1.5 px-4 rounded text-label-md text-primary font-bold cursor-pointer hover:bg-surface-container-high transition-colors" onClick={disconnect}>
+                            <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+                            {address?.slice(0, 6)}...{address?.slice(-4)}
+                        </div>
+                    )}
                     <button className="md:hidden text-on-surface">
                         <span className="material-symbols-outlined">menu</span>
                     </button>
