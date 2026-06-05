@@ -9,9 +9,9 @@ export function TopNav() {
     const pathname = usePathname();
 
     const navItems = [
-        { name: "Audits", path: "/" },
+        { name: "Home", path: "/" },
+        { name: "Launch App", path: "/audit" },
         { name: "Reports", path: "/reports" },
-        { name: "Scan", path: "/scan" },
         { name: "Documentation", path: "/docs" },
     ];
 
