@@ -16,7 +16,7 @@ export async function generateFixSuggestion(
     finding: Finding,
     sourceCode: string
 ): Promise<FixSuggestion> {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     
     // Extract the vulnerable snippet (a few lines before and after for context)
     const lines = sourceCode.split('\n');
@@ -29,40 +29,41 @@ export async function generateFixSuggestion(
         return {
             findingId: finding.id,
             originalCodeSnippet: snippet,
-            suggestedFix: "// Please configure OPENAI_API_KEY in .env to generate automatic code fixes.",
+            suggestedFix: "// Please configure GEMINI_API_KEY in .env to generate automatic code fixes.",
             explanation: finding.recommendation
         };
     }
 
     try {
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        const prompt = `You are a senior smart contract auditor. Provide the exact code replacement to fix the specified vulnerability. Return ONLY the fixed code snippet (no markdown tags), followed by a brief 1-sentence explanation separated by the literal string '|||'.
+        
+Vulnerability: ${finding.title}
+Description: ${finding.description}
+
+Original Code Context:
+${snippet}`;
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${apiKey}`
+                "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                model: "gpt-4o",
-                messages: [
-                    {
-                        role: "system",
-                        content: "You are a senior smart contract auditor. Provide the exact code replacement to fix the specified vulnerability. Return ONLY the fixed code snippet (no markdown tags), followed by a brief 1-sentence explanation separated by the literal string '|||'."
-                    },
-                    {
-                        role: "user",
-                        content: `Vulnerability: ${finding.title}\nDescription: ${finding.description}\n\nOriginal Code Context:\n${snippet}`
-                    }
-                ],
-                temperature: 0.2
+                contents: [{
+                    parts: [{ text: prompt }]
+                }],
+                generationConfig: {
+                    temperature: 0.2
+                }
             })
         });
 
         if (!response.ok) {
-            throw new Error(`OpenAI API error: ${response.statusText}`);
+            throw new Error(`Gemini API error: ${response.statusText}`);
         }
 
         const data = await response.json();
-        const output = data.choices[0].message.content;
+        const output = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
         const [suggestedFix, explanation] = output.split('|||').map((s: string) => s.trim());
 
         return {
