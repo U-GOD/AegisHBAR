@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-    title: "AegisHBAR - Findings Dashboard",
+    title: "AegisHBAR - AI-Powered Smart Contract Security",
     description: "Enterprise Smart Contract Auditor secured by Hedera.",
 };
 
