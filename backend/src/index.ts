@@ -33,24 +33,20 @@ app.get("/health", (req: Request, res: Response) => {
     res.status(200).json({ status: "OK", service: "AegisHBAR Backend" });
 });
 
+import { createX402Middleware } from "./middleware/x402";
+
+// ...
 // In-memory store to hold active streams before they are picked up
 const activeStreams = new Map<string, SSEStreamManager>();
 
-app.post("/api/audit", async (req: Request, res: Response) => {
+const x402Middleware = createX402Middleware();
+
+app.post("/api/audit", x402Middleware, async (req: Request, res: Response) => {
     try {
         const { sourceCode, categories, depositId, depositor } = req.body;
 
         if (!sourceCode || !categories || !depositId || !depositor) {
             return res.status(400).json({ error: "Missing required fields" });
-        }
-
-        // Mock x402 Payment Gate for Hackathon Demo
-        // If the frontend hasn't attached a payment proof header yet, return 402.
-        // This triggers the @x402/client on the frontend to open MetaMask and pay.
-        if (!req.headers['x-402-payment']) {
-            const payTo = process.env.HEDERA_ACCOUNT_ID || "0x0000000000000000000000000000000000000000";
-            res.setHeader('WWW-Authenticate', `x402 scheme="exact", network="eip155:296", asset="0x0000000000000000000000000000000000000000", payTo="${payTo}", price="0.5"`);
-            return res.status(402).json({ error: "Payment required" });
         }
 
         // Create a detached stream manager. 

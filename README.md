@@ -169,7 +169,7 @@ sequenceDiagram
 
     U->>B: POST /audit/reentrancy {contract_source}
     B->>U: 402 Payment Required<br/>{price: "5 HBAR", payTo: "0.0.XXX",<br/>network: "hedera:testnet"}
-    U->>U: Sign payment via HashPack
+    U->>U: Sign payment via MetaMask
     U->>B: POST /audit/reentrancy<br/>{X-PAYMENT header}
     B->>X: Verify payment signature
     X->>H: Settle HBAR transfer
@@ -195,13 +195,13 @@ sequenceDiagram
 
 | Category | HBAR | USDC | Description |
 |:--|:--|:--|:--|
-| Reentrancy Analysis | 5 | $0.05 | State mutation ordering, cross-function reentrancy, read-only reentrancy |
-| Access Control Review | 3 | $0.03 | Role enforcement, privilege escalation, missing modifiers |
-| Integer Overflow Check | 2 | $0.02 | Arithmetic safety, unchecked blocks, casting issues |
-| Gas Optimization | 3 | $0.03 | Storage patterns, loop efficiency, redundant operations |
-| Business Logic Audit | 8 | $0.08 | Domain-specific logic flaws, edge cases, economic exploits |
-| **Full Audit Bundle** | **15** | **$0.15** | **All categories at 20% discount** |
-| Certificate NFT Mint | 2 | $0.02 | On-chain proof of audit |
+| AST Parser (Base) | 1.0 | $0.01 | Required core engine execution and syntax validation |
+| Reentrancy Analysis | 0.5 | $0.005 | State mutation ordering, cross-function reentrancy, read-only reentrancy |
+| Access Control Review | 0.5 | $0.005 | Role enforcement, privilege escalation, missing modifiers |
+| Integer Overflow Check | 0.5 | $0.005 | Arithmetic safety, unchecked blocks, casting issues |
+| Gas Optimization | 0.2 | $0.002 | Storage patterns, loop efficiency, redundant operations |
+| Business Logic Audit | 1.0 | $0.01 | Domain-specific logic flaws, edge cases, economic exploits |
+| **Full Audit Bundle** | **3.7** | **$0.037** | **All categories included** |
 
 ---
 
@@ -309,11 +309,11 @@ ERC-721 compliant NFT contract for audit certificates.
 
 | Contract | Address |
 |:--|:--|
-| AuditEscrow | `0.0.XXXXXX` |
-| AuditRegistry | `0.0.XXXXXX` |
-| AuditCertificate | `0.0.XXXXXX` |
-| HCS Audit Topic | `0.0.XXXXXX` |
-| HTS Certificate Token | `0.0.XXXXXX` |
+| AuditEscrow | `0xFc5322eE88f892DbB271e002C7cfe49795dE684b` |
+| AuditRegistry | `0x15D03b790103CB070035F192c1022Cc2ECE25BD6` |
+| AuditCertificate | `0.0.xxxxx` |
+| HCS Audit Topic | `0.0.xxxxx` |
+| HTS Certificate Token | `0.0.xxxxx` |
 
 ---
 
