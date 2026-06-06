@@ -90,7 +90,7 @@ graph TB
         CT["Cost Tracker"]
         FS["Findings Stream (SSE)"]
         CV["Certificate Viewer"]
-        WC["Wallet Connect<br/>(WalletConnect v2)"]
+        WC["HashConnect<br/>(HashPack)"]
     end
 
     subgraph "Backend — Express + TypeScript"
@@ -169,7 +169,7 @@ sequenceDiagram
 
     U->>B: POST /audit/reentrancy {contract_source}
     B->>U: 402 Payment Required<br/>{price: "5 HBAR", payTo: "0.0.XXX",<br/>network: "hedera:testnet"}
-    U->>U: Sign payment via MetaMask
+    U->>U: Sign payment via HashPack
     U->>B: POST /audit/reentrancy<br/>{X-PAYMENT header}
     B->>X: Verify payment signature
     X->>H: Settle HBAR transfer
@@ -208,7 +208,7 @@ sequenceDiagram
 ## User Flow
 
 **Step 1 — Connect Wallet**
-Connect a MetaMask wallet configured for the Hedera Testnet. The application supports HBAR payments via the x402 standard over EVM.
+Connect a HashPack wallet configured for the Hedera Testnet. The application supports native HBAR payments via the x402 standard.
 
 **Step 2 — Upload Contract**
 Paste Solidity source code or upload a `.sol` file. The parser analyzes the contract and displays metrics: line count, function count, complexity score, and detected patterns.
@@ -237,7 +237,7 @@ After the audit completes, mint an Audit Certificate NFT in one click. The NFT a
 | Tailwind CSS | Utility-first styling |
 | Framer Motion | Animations and transitions |
 | Zustand | Client-side state management |
-| MetaMask | Wallet integration via standard EVM injected provider |
+| HashConnect | Wallet integration via HashPack for native Hedera accounts |
 
 ### Backend
 | Technology | Purpose |
@@ -327,7 +327,6 @@ ERC-721 compliant NFT contract for audit certificates.
 - A Hedera Testnet account ([portal.hedera.com](https://portal.hedera.com))
 - HashPack wallet with testnet HBAR
 - OpenAI or Anthropic API key
-- WalletConnect Project ID ([cloud.walletconnect.com](https://cloud.walletconnect.com))
 
 ### Installation
 
