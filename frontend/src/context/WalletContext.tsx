@@ -41,7 +41,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
                     if (!HashConnect) throw new Error("HashConnect class not found in dynamically imported module");
 
-                    hc = new HashConnect(LedgerId.TESTNET, "1133ab4373a2af4a69daed2381e4b85c", appMetadata, false);
+                    hc = new HashConnect(LedgerId.TESTNET, "03231d174fa60611f3d27d71636c63b3", appMetadata, false);
                     
                     hc.pairingEvent.on((pairingData: SessionData) => {
                         if (pairingData.accountIds.length > 0) {
