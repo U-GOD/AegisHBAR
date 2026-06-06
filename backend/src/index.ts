@@ -44,8 +44,14 @@ app.post("/api/audit", async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Missing required fields" });
         }
 
-        // x402 middleware has already verified and settled the payment at this point.
-        // The request only reaches this handler if the client paid successfully.
+        // Mock x402 Payment Gate for Hackathon Demo
+        // If the frontend hasn't attached a payment proof header yet, return 402.
+        // This triggers the @x402/client on the frontend to open MetaMask and pay.
+        if (!req.headers['x-402-payment']) {
+            const payTo = process.env.HEDERA_ACCOUNT_ID || "0x0000000000000000000000000000000000000000";
+            res.setHeader('WWW-Authenticate', `x402 scheme="exact", network="eip155:296", asset="0x0000000000000000000000000000000000000000", payTo="${payTo}", price="0.5"`);
+            return res.status(402).json({ error: "Payment required" });
+        }
 
         // Create a detached stream manager. 
         // It won't actually send events until the client connects to /api/audit/stream/:depositId
