@@ -93,9 +93,9 @@ export function AuditStartButton({ sourceCode, categories, totalCost, onStatusCh
                 transaction.setNodeAccountIds([AccountId.fromString("0.0.3")]);
                 transaction.setTransactionId(TransactionId.generate(accountId)); 
 
-                const signer = hashconnect.getSigner(AccountId.fromString(accountId));
-                const frozenTx = await transaction.freezeWithSigner(signer);
-                const signedTx = await frozenTx.signWithSigner(signer);
+                const signer = hashconnect.getSigner(AccountId.fromString(accountId) as any);
+                const frozenTx = await transaction.freezeWithSigner(signer as any);
+                const signedTx = await frozenTx.signWithSigner(signer as any);
 
                 const payload = {
                     transaction: toBase64(signedTx.toBytes())
