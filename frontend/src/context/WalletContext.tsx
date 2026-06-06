@@ -1,122 +1,91 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { ethers } from "ethers";
-
-declare global {
-    interface Window {
-        ethereum?: any;
-    }
-}
+import { HashConnect, HashConnectConnectionState, SessionData } from "hashconnect";
+import { LedgerId } from "@hashgraph/sdk";
 
 interface WalletContextType {
-    address: string | null;
+    accountId: string | null;
     isConnected: boolean;
-    connect: () => Promise<void>;
+    connect: () => void;
     disconnect: () => void;
-    provider: ethers.BrowserProvider | null;
-    signer: ethers.JsonRpcSigner | null;
+    hashconnect: HashConnect | null;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
-// Hedera Testnet Configuration
-const HEDERA_TESTNET_CHAIN_ID = "0x128"; // 296 in hex
+const appMetadata = {
+    name: "AegisHBAR",
+    description: "Hedera Smart Contract Auditing",
+    icons: ["https://cryptologos.cc/logos/hedera-hbar-logo.png"],
+    url: typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
+};
+
+// Initialize once outside the component to prevent hot-reloading duplicate instances
+let hc: HashConnect | null = null;
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-    const [address, setAddress] = useState<string | null>(null);
-    const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
-    const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null);
+    const [accountId, setAccountId] = useState<string | null>(null);
+    const [isConnected, setIsConnected] = useState(false);
+    const [hashconnect, setHashconnect] = useState<HashConnect | null>(null);
 
     useEffect(() => {
-        // Automatically check if already connected
-        if (typeof window !== "undefined" && window.ethereum) {
-            const browserProvider = new ethers.BrowserProvider(window.ethereum);
-            setProvider(browserProvider);
+        let mounted = true;
 
-            window.ethereum.request({ method: "eth_accounts" }).then((accounts: string[]) => {
-                if (accounts.length > 0) {
-                    setAddress(accounts[0]);
-                    browserProvider.getSigner().then(setSigner);
-                }
-            });
+        const initHashConnect = async () => {
+            if (!hc) {
+                // Using a common public test Project ID for WalletConnect. In production, get your own from cloud.walletconnect.com
+                hc = new HashConnect(LedgerId.TESTNET, "1133ab4373a2af4a69daed2381e4b85c", appMetadata, false);
+                
+                hc.pairingEvent.on((pairingData: SessionData) => {
+                    if (pairingData.accountIds.length > 0) {
+                        setAccountId(pairingData.accountIds[0]);
+                        setIsConnected(true);
+                    }
+                });
 
-            window.ethereum.on("accountsChanged", (accounts: string[]) => {
-                if (accounts.length > 0) {
-                    setAddress(accounts[0]);
-                    browserProvider.getSigner().then(setSigner);
-                } else {
-                    setAddress(null);
-                    setSigner(null);
-                }
-            });
+                hc.disconnectionEvent.on(() => {
+                    setAccountId(null);
+                    setIsConnected(false);
+                });
 
-            window.ethereum.on("chainChanged", () => {
-                window.location.reload();
-            });
-        }
+                hc.connectionStatusChangeEvent.on((state: HashConnectConnectionState) => {
+                    if (state === HashConnectConnectionState.Disconnected) {
+                        setAccountId(null);
+                        setIsConnected(false);
+                    }
+                });
+
+                await hc.init();
+            }
+            if (mounted) {
+                setHashconnect(hc);
+            }
+        };
+
+        initHashConnect();
+
+        return () => {
+            mounted = false;
+        };
     }, []);
 
-    const connect = async () => {
-        if (!window.ethereum) {
-            alert("MetaMask is not installed. Please install it to use this app.");
-            return;
-        }
-
-        try {
-            const browserProvider = new ethers.BrowserProvider(window.ethereum);
-            
-            // Switch to Hedera Testnet if not already on it
-            const network = await browserProvider.getNetwork();
-            if (network.chainId !== BigInt(296)) {
-                try {
-                    await window.ethereum.request({
-                        method: "wallet_switchEthereumChain",
-                        params: [{ chainId: HEDERA_TESTNET_CHAIN_ID }],
-                    });
-                } catch (switchError: any) {
-                    // This error code indicates that the chain has not been added to MetaMask.
-                    if (switchError.code === 4902) {
-                        await window.ethereum.request({
-                            method: "wallet_addEthereumChain",
-                            params: [
-                                {
-                                    chainId: HEDERA_TESTNET_CHAIN_ID,
-                                    chainName: "Hedera Testnet",
-                                    rpcUrls: ["https://testnet.hashio.io/api"],
-                                    nativeCurrency: {
-                                        name: "HBAR",
-                                        symbol: "HBAR",
-                                        decimals: 18,
-                                    },
-                                    blockExplorerUrls: ["https://hashscan.io/testnet"],
-                                },
-                            ],
-                        });
-                    } else {
-                        throw switchError;
-                    }
-                }
-            }
-
-            const accounts = await browserProvider.send("eth_requestAccounts", []);
-            setAddress(accounts[0]);
-            setProvider(browserProvider);
-            setSigner(await browserProvider.getSigner());
-        } catch (error) {
-            console.error("Failed to connect wallet:", error);
+    const connect = () => {
+        if (hashconnect) {
+            hashconnect.openPairingModal();
         }
     };
 
     const disconnect = () => {
-        setAddress(null);
-        setSigner(null);
-        // MetaMask doesn't have a true "disconnect" method that apps can trigger,
-        // so we just clear local state.
+        if (hashconnect) {
+            hashconnect.disconnect();
+            setAccountId(null);
+            setIsConnected(false);
+        }
     };
 
     return (
-        <WalletContext.Provider value={{ address, isConnected: !!address, connect, disconnect, provider, signer }}>
+        <WalletContext.Provider value={{ accountId, isConnected, connect, disconnect, hashconnect }}>
             {children}
         </WalletContext.Provider>
     );
