@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import { SSEStreamManager } from "./engine/stream";
 import { runAuditPipeline } from "./engine/orchestrator";
 import { ethers } from "ethers";
+import { createX402Middleware } from "./middleware/x402";
 
 dotenv.config();
 
@@ -26,22 +27,18 @@ app.use((req: Request, res: Response, next) => {
 
 app.use(express.json());
 
-// x402 payment verification is handled on the frontend via MetaMask.
-// The backend trusts the frontend payment flow for the hackathon demo.
 
 app.get("/health", (req: Request, res: Response) => {
     res.status(200).json({ status: "OK", service: "AegisHBAR Backend" });
 });
 
-import { createX402Middleware } from "./middleware/x402";
+// x402 payment middleware - handles 402 flow for protected routes
+app.use(createX402Middleware());
 
-// ...
 // In-memory store to hold active streams before they are picked up
 const activeStreams = new Map<string, SSEStreamManager>();
 
-const x402Middleware = createX402Middleware();
-
-app.post("/api/audit", x402Middleware, async (req: Request, res: Response) => {
+app.post("/api/audit", async (req: Request, res: Response) => {
     try {
         const { sourceCode, categories, depositId, depositor } = req.body;
 
