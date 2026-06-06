@@ -3,10 +3,7 @@
 import { useState } from "react";
 import { useWallet } from "../context/WalletContext";
 import { AuditCategory } from "./CategorySelector";
-import { x402Client } from "@x402/core/client";
-import { ExactEvmScheme } from "@x402/evm/exact/client";
-import { wrapFetchWithPayment } from "@x402/fetch";
-import { ethers } from "ethers";
+import { TransferTransaction, Hbar, AccountId, TransactionId } from "@hashgraph/sdk";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
@@ -20,8 +17,16 @@ interface AuditStartProps {
     onStreamUrl: (url: string) => void;
 }
 
+function toBase64(arr: Uint8Array) {
+    let binary = '';
+    for (let i = 0; i < arr.byteLength; i++) {
+        binary += String.fromCharCode(arr[i]);
+    }
+    return btoa(binary);
+}
+
 export function AuditStartButton({ sourceCode, categories, totalCost, onStatusChange, onStreamUrl }: AuditStartProps) {
-    const { isConnected, connect, signer } = useWallet();
+    const { isConnected, connect, accountId, hashconnect } = useWallet();
     const [status, setStatus] = useState<AuditStatus>("idle");
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -33,7 +38,7 @@ export function AuditStartButton({ sourceCode, categories, totalCost, onStatusCh
     const startAudit = async () => {
         setErrorMsg(null);
 
-        if (!isConnected || !signer) {
+        if (!isConnected || !accountId || !hashconnect) {
             await connect();
             return;
         }
@@ -51,59 +56,71 @@ export function AuditStartButton({ sourceCode, categories, totalCost, onStatusCh
 
         try {
             updateStatus("depositing");
-            
-            // Create a pseudo-depositId since we no longer have an on-chain escrow ID
-            // The backend uses this to uniquely identify the SSE stream
-            const depositId = ethers.hexlify(ethers.randomBytes(32));
-            const address = await signer.getAddress();
 
-            // 1. Wrap the ethers Signer into a ClientEvmSigner for @x402/evm
-            const evmSigner = {
-                address: address as `0x${string}`,
-                signTypedData: async (args: any) => {
-                    // Ethers v6 signTypedData signature: (domain, types, value)
-                    // We must filter out the EIP712Domain type from types, as ethers adds it automatically
-                    const types = { ...args.types };
-                    delete types.EIP712Domain;
-                    
-                    return (await signer.signTypedData(
-                        args.domain,
-                        types,
-                        args.message
-                    )) as `0x${string}`;
-                }
+            const depositId = "audit_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+            
+            const reqBody = {
+                sourceCode,
+                categories: selectedCategories,
+                depositId,
+                depositor: accountId,
             };
 
-            // 2. Initialize the x402 client with the EVM Scheme
-            const client = new x402Client().register(
-                "eip155:296", // Hedera Testnet EVM
-                new ExactEvmScheme(evmSigner)
-            );
-
-            // 3. Make the API request using wrapped fetch
-            // This will automatically intercept the 402 Payment Required response,
-            // prompt the user to sign the transaction via MetaMask, and retry the request.
-            updateStatus("submitting");
-            
-            const fetchWithPay = wrapFetchWithPayment(window.fetch, client);
-            
-            const response = await fetchWithPay(`${BACKEND_URL}/api/audit`, {
+            let response = await fetch(`${BACKEND_URL}/api/audit`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    sourceCode,
-                    categories: selectedCategories,
-                    depositId,
-                    depositor: address,
-                }),
+                body: JSON.stringify(reqBody),
             });
+
+            if (response.status === 402) {
+                const authHeader = response.headers.get("x-402-payment");
+                if (!authHeader) throw new Error("Missing x-402-payment header");
+
+                const paymentUrl = authHeader.split(" ")[1];
+                if (!paymentUrl) throw new Error("Invalid x-402-payment header format");
+
+                const invoiceRes = await fetch(paymentUrl);
+                const invoice = await invoiceRes.json();
+
+                if (!invoice.amount || !invoice.recipient) {
+                    throw new Error("Invalid invoice details from facilitator");
+                }
+
+                const transaction = new TransferTransaction()
+                    .addHbarTransfer(accountId, Hbar.fromTinybars(-invoice.amount))
+                    .addHbarTransfer(invoice.recipient, Hbar.fromTinybars(invoice.amount));
+                
+                transaction.setNodeAccountIds([AccountId.fromString("0.0.3")]);
+                transaction.setTransactionId(TransactionId.generate(accountId)); 
+
+                const signer = hashconnect.getSigner(AccountId.fromString(accountId));
+                const frozenTx = await transaction.freezeWithSigner(signer);
+                const signedTx = await frozenTx.signWithSigner(signer);
+
+                const payload = {
+                    transaction: toBase64(signedTx.toBytes())
+                };
+                
+                const payloadB64 = btoa(JSON.stringify(payload));
+                const paymentAuth = `Blocky ${paymentUrl} payment="${payloadB64}"`;
+
+                updateStatus("submitting");
+
+                response = await fetch(`${BACKEND_URL}/api/audit`, {
+                    method: "POST",
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "x-402-payment": paymentAuth
+                    },
+                    body: JSON.stringify(reqBody),
+                });
+            }
 
             if (!response.ok) {
                 const body = await response.json().catch(() => ({}));
                 throw new Error(body.error || `Backend returned ${response.status}`);
             }
 
-            // Step 3: Hand off to the SSE stream
             updateStatus("streaming");
             onStreamUrl(`${BACKEND_URL}/api/audit/stream/${depositId}`);
 
@@ -111,8 +128,8 @@ export function AuditStartButton({ sourceCode, categories, totalCost, onStatusCh
             console.error("[AuditStart] Error:", err);
             updateStatus("error");
 
-            if (err.code === "ACTION_REJECTED" || err.message?.includes("rejected")) {
-                setErrorMsg("Payment transaction was rejected in MetaMask.");
+            if (err.message?.includes("rejected")) {
+                setErrorMsg("Payment transaction was rejected.");
             } else {
                 setErrorMsg(err.message || "An unexpected error occurred.");
             }
