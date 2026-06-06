@@ -11,28 +11,22 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const corsOptions = {
-    origin: "*",
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-402-Payment", "X-Requested-With", "Accept"],
-    exposedHeaders: ["WWW-Authenticate", "X-402-PaymentRequired"]
-};
-
-app.use(cors(corsOptions));
-app.use(express.json());
-
-// Manually handle preflight OPTIONS requests before x402 middleware intercepts them
-// Express 5 doesn't support app.options("*"), so we use a middleware instead
+// Manual CORS middleware - runs before EVERYTHING, sets headers on ALL responses
 app.use((req: Request, res: Response, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-402-Payment, X-Requested-With, Accept");
+    res.setHeader("Access-Control-Expose-Headers", "WWW-Authenticate, X-402-PaymentRequired");
+
+    // Short-circuit preflight requests immediately
     if (req.method === "OPTIONS") {
-        res.setHeader("Access-Control-Allow-Origin", "*");
-        res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-402-Payment, X-Requested-With, Accept");
         res.status(204).end();
         return;
     }
     next();
 });
+
+app.use(express.json());
 
 // x402 payment gate: returns HTTP 402 for unpaid requests to protected routes
 app.use(createX402Middleware());
