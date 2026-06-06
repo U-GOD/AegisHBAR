@@ -11,7 +11,12 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+app.use(cors({
+    origin: "*",
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-402-Payment", "X-Requested-With", "Accept"],
+    exposedHeaders: ["WWW-Authenticate", "X-402-PaymentRequired"]
+}));
 app.use(express.json());
 
 // x402 payment gate: returns HTTP 402 for unpaid requests to protected routes
