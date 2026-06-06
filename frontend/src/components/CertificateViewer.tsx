@@ -2,15 +2,23 @@
 
 interface CertificateViewerProps {
     report: any;
-    certificate: {
-        tokenId: number;
+    certificate?: {
+        tokenId: number | string;
         hcsTopicId: string;
         metadataUri: string;
         pdfUri: string;
-    };
+    } | null;
 }
 
 export function CertificateViewer({ report, certificate }: CertificateViewerProps) {
+    if (!certificate) {
+        return (
+            <div className="bg-surface border border-outline-variant rounded-xl p-8 text-center text-on-surface-variant">
+                <span className="material-symbols-outlined text-[48px] text-error/50 mb-4">error</span>
+                <p>The audit completed, but the certificate failed to mint or load. Please check backend logs.</p>
+            </div>
+        );
+    }
     const CERTIFICATE_ADDRESS = process.env.NEXT_PUBLIC_CERTIFICATE_ADDRESS || "0xC26fc21486624F3C1F2B55BeDBeDa39CFF79c4D4";
 
     // Convert ipfs:// URI to a public HTTP gateway URL for easy viewing
