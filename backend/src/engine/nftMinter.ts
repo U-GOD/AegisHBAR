@@ -28,6 +28,9 @@ export async function mintAuditNFT(
     
     const client = agentKit.client;
 
+    if (!client) {
+        throw new Error("Hedera client not initialized. Cannot mint NFT.");
+    }
 
     const mintTx = new TokenMintTransaction()
         .setTokenId(CERTIFICATE_TOKEN_ID)
