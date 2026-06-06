@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useWallet } from "../context/WalletContext";
 import { AuditCategory } from "./CategorySelector";
-import { TransferTransaction, Hbar, AccountId, TransactionId } from "@hashgraph/sdk";
+
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
@@ -85,6 +85,8 @@ export function AuditStartButton({ sourceCode, categories, totalCost, onStatusCh
                 if (!invoice.amount || !invoice.recipient) {
                     throw new Error("Invalid invoice details from facilitator");
                 }
+
+                const { TransferTransaction, Hbar, AccountId, TransactionId } = await import("@hashgraph/sdk");
 
                 const transaction = new TransferTransaction()
                     .addHbarTransfer(accountId, Hbar.fromTinybars(-invoice.amount))

@@ -1,8 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { HashConnect, HashConnectConnectionState, SessionData } from "hashconnect";
-import { LedgerId } from "@hashgraph/sdk";
+import type { HashConnect, HashConnectConnectionState, SessionData } from "hashconnect";
 
 interface WalletContextType {
     accountId: string | null;
@@ -22,7 +21,7 @@ const appMetadata = {
 };
 
 // Initialize once outside the component to prevent hot-reloading duplicate instances
-let hc: HashConnect | null = null;
+let hc: any = null;
 
 export function WalletProvider({ children }: { children: ReactNode }) {
     const [accountId, setAccountId] = useState<string | null>(null);
@@ -34,7 +33,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
         const initHashConnect = async () => {
             if (!hc) {
-                // Using a common public test Project ID for WalletConnect. In production, get your own from cloud.walletconnect.com
+                const { HashConnect, HashConnectConnectionState } = await import("hashconnect");
+                const { LedgerId } = await import("@hashgraph/sdk");
+
                 hc = new HashConnect(LedgerId.TESTNET, "1133ab4373a2af4a69daed2381e4b85c", appMetadata, false);
                 
                 hc.pairingEvent.on((pairingData: SessionData) => {
@@ -49,7 +50,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                     setIsConnected(false);
                 });
 
-                hc.connectionStatusChangeEvent.on((state: HashConnectConnectionState) => {
+                hc.connectionStatusChangeEvent.on((state: any) => {
                     if (state === HashConnectConnectionState.Disconnected) {
                         setAccountId(null);
                         setIsConnected(false);
