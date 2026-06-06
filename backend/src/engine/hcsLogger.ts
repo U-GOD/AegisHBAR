@@ -42,7 +42,7 @@ export async function logFindingsToHCS(report: AuditReport): Promise<string> {
             throw new Error("Submit Topic Message tool not found in Hedera Agent Kit");
         }
 
-        const response = await hcsTool.execute(hederaClient, agentKit.context, {
+        const response = await hcsTool.execute(hederaClient as any, agentKit.context, {
             topicId,
             message
         });
