@@ -37,7 +37,7 @@ export async function mintAuditNFT(
         throw new Error("Mint Non-Fungible Token tool not found in Hedera Agent Kit");
     }
 
-    const mintResponse = await mintTool.execute(client, agentKit.context, {
+    const mintResponse = await mintTool.execute(client as any, agentKit.context, {
         tokenId: CERTIFICATE_TOKEN_ID,
         uris: [tokenUri]
     });
