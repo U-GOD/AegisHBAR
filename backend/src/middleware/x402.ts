@@ -1,8 +1,8 @@
 import { paymentMiddleware, x402ResourceServer } from "@x402/express";
-import { ExactEvmScheme } from "@x402/evm/exact/server";
+import { ExactHederaScheme } from "@x402/hedera/exact/server";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 
-const FACILITATOR_URL = process.env.X402_FACILITATOR_URL || "https://x402.org/facilitator";
+const FACILITATOR_URL = process.env.X402_FACILITATOR_URL || "https://api.testnet.blocky402.com";
 const AGENT_WALLET_ADDRESS = process.env.HEDERA_ACCOUNT_ID || "";
 const HEDERA_NETWORK = process.env.HEDERA_NETWORK || "testnet";
 
@@ -13,20 +13,20 @@ const HEDERA_NETWORK = process.env.HEDERA_NETWORK || "testnet";
  */
 export function createX402Middleware() {
     const facilitatorClient = new HTTPFacilitatorClient({ url: FACILITATOR_URL });
-
-    const evmScheme = new ExactEvmScheme();
+    const hederaScheme = new ExactHederaScheme();
 
     const resourceServer = new x402ResourceServer(facilitatorClient)
-        .register(`eip155:296`, evmScheme); // 296 is Hedera Testnet EVM Chain ID
+        .register(`hedera:${HEDERA_NETWORK}`, hederaScheme);
 
     const routeConfig: Record<string, any> = {
         "POST /api/audit": {
             accepts: {
                 scheme: "exact",
                 price: "0.5",
-                network: `eip155:296`,
-                asset: "0x0000000000000000000000000000000000000000", // Native HBAR on EVM
+                network: `hedera:${HEDERA_NETWORK}`,
+                asset: "0.0.0", // Native HBAR
                 payTo: AGENT_WALLET_ADDRESS,
+                extra: { feePayer: "0.0.7162784" } // Blocky402 Testnet Fee Payer
             },
             description: "Smart contract security audit",
         },
