@@ -32,6 +32,11 @@ export async function logFindingsToHCS(report: AuditReport): Promise<string> {
     try {
         const hederaClient = agentKit.client;
 
+        if (!hederaClient) {
+            console.warn("[HCS Logger] Hedera client not initialized. Skipping on-chain log.");
+            return "";
+        }
+
         const tx = new TopicMessageSubmitTransaction()
             .setTopicId(topicId)
             .setMessage(message);
