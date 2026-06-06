@@ -230,7 +230,7 @@ export default function LandingPage() {
                         <span className="px-4 py-2 border border-outline-variant rounded-full text-on-surface-variant font-label-sm text-label-sm bg-surface-container-low">x402 Protocol</span>
                         <span className="px-4 py-2 border border-outline-variant rounded-full text-on-surface-variant font-label-sm text-label-sm bg-surface-container-low">Next.js</span>
                         <span className="px-4 py-2 border border-outline-variant rounded-full text-on-surface-variant font-label-sm text-label-sm bg-surface-container-low">OpenAI Models</span>
-                        <span className="px-4 py-2 border border-outline-variant rounded-full text-on-surface-variant font-label-sm text-label-sm bg-surface-container-low">MetaMask</span>
+                        <span className="px-4 py-2 border border-outline-variant rounded-full text-on-surface-variant font-label-sm text-label-sm bg-surface-container-low">HashPack</span>
                         <span className="px-4 py-2 border border-outline-variant rounded-full text-on-surface-variant font-label-sm text-label-sm bg-surface-container-low">Foundry</span>
                     </div>
                 </div>

@@ -12,10 +12,10 @@ export default function DocsPage() {
                             Getting Started
                         </h2>
                         <ol className="list-decimal list-inside text-body-md text-on-surface-variant flex flex-col gap-2 ml-2">
-                            <li><strong className="text-on-surface">Connect Wallet</strong> — Click "Connect Wallet" in the top-right corner. MetaMask will prompt you to connect to the Hedera Testnet.</li>
+                            <li><strong className="text-on-surface">Connect Wallet</strong> — Click "Connect Wallet" in the top-right corner. HashPack will prompt you to connect to the Hedera Testnet.</li>
                             <li><strong className="text-on-surface">Upload Contract</strong> — Paste your Solidity source code into the editor, or drag and drop a <code className="text-primary bg-primary/10 px-1 rounded">.sol</code> file.</li>
                             <li><strong className="text-on-surface">Select Modules</strong> — Pick the vulnerability categories you want to scan for. Each module has a small HBAR cost.</li>
-                            <li><strong className="text-on-surface">Run Audit</strong> — Click the audit button. MetaMask will ask you to confirm the HBAR deposit into our escrow contract.</li>
+                            <li><strong className="text-on-surface">Run Audit</strong> — Click the audit button. HashPack will ask you to confirm the HBAR payment to the Blocky402 facilitator.</li>
                             <li><strong className="text-on-surface">Receive Certificate</strong> — Once complete, you will receive an immutable NFT certificate and a downloadable PDF report.</li>
                         </ol>
                     </section>
