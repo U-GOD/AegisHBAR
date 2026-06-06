@@ -1,10 +1,8 @@
 import express, { Request, Response } from "express";
-import cors from "cors";
 import dotenv from "dotenv";
 import { SSEStreamManager } from "./engine/stream";
 import { runAuditPipeline } from "./engine/orchestrator";
 import { ethers } from "ethers";
-import { createX402Middleware } from "./middleware/x402";
 
 dotenv.config();
 
@@ -28,8 +26,8 @@ app.use((req: Request, res: Response, next) => {
 
 app.use(express.json());
 
-// x402 payment gate: returns HTTP 402 for unpaid requests to protected routes
-app.use(createX402Middleware());
+// x402 payment verification is handled on the frontend via MetaMask.
+// The backend trusts the frontend payment flow for the hackathon demo.
 
 app.get("/health", (req: Request, res: Response) => {
     res.status(200).json({ status: "OK", service: "AegisHBAR Backend" });
@@ -128,6 +126,6 @@ app.get("/api/certificate/:tokenId", async (req: Request, res: Response) => {
     }
 });
 
-app.listen(PORT, () => {
+app.listen(Number(PORT), "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
 });
