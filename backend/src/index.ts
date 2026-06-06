@@ -21,8 +21,18 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Explicitly handle preflight OPTIONS requests BEFORE x402 middleware intercepts them
-app.options("*", cors(corsOptions));
+// Manually handle preflight OPTIONS requests before x402 middleware intercepts them
+// Express 5 doesn't support app.options("*"), so we use a middleware instead
+app.use((req: Request, res: Response, next) => {
+    if (req.method === "OPTIONS") {
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-402-Payment, X-Requested-With, Accept");
+        res.status(204).end();
+        return;
+    }
+    next();
+});
 
 // x402 payment gate: returns HTTP 402 for unpaid requests to protected routes
 app.use(createX402Middleware());
