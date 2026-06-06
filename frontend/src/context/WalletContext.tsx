@@ -32,35 +32,43 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         let mounted = true;
 
         const initHashConnect = async () => {
-            if (!hc) {
-                const { HashConnect, HashConnectConnectionState } = await import("hashconnect");
-                const { LedgerId } = await import("@hashgraph/sdk");
+            try {
+                if (!hc) {
+                    const hcModule = await import("hashconnect");
+                    const HashConnect = hcModule.HashConnect || (hcModule.default as any)?.HashConnect;
+                    const HashConnectConnectionState = hcModule.HashConnectConnectionState || (hcModule.default as any)?.HashConnectConnectionState;
+                    const { LedgerId } = await import("@hashgraph/sdk");
 
-                hc = new HashConnect(LedgerId.TESTNET, "1133ab4373a2af4a69daed2381e4b85c", appMetadata, false);
-                
-                hc.pairingEvent.on((pairingData: SessionData) => {
-                    if (pairingData.accountIds.length > 0) {
-                        setAccountId(pairingData.accountIds[0]);
-                        setIsConnected(true);
-                    }
-                });
+                    if (!HashConnect) throw new Error("HashConnect class not found in dynamically imported module");
 
-                hc.disconnectionEvent.on(() => {
-                    setAccountId(null);
-                    setIsConnected(false);
-                });
+                    hc = new HashConnect(LedgerId.TESTNET, "1133ab4373a2af4a69daed2381e4b85c", appMetadata, false);
+                    
+                    hc.pairingEvent.on((pairingData: SessionData) => {
+                        if (pairingData.accountIds.length > 0) {
+                            setAccountId(pairingData.accountIds[0]);
+                            setIsConnected(true);
+                        }
+                    });
 
-                hc.connectionStatusChangeEvent.on((state: any) => {
-                    if (state === HashConnectConnectionState.Disconnected) {
+                    hc.disconnectionEvent.on(() => {
                         setAccountId(null);
                         setIsConnected(false);
-                    }
-                });
+                    });
 
-                await hc.init();
-            }
-            if (mounted) {
-                setHashconnect(hc);
+                    hc.connectionStatusChangeEvent.on((state: any) => {
+                        if (state === HashConnectConnectionState.Disconnected) {
+                            setAccountId(null);
+                            setIsConnected(false);
+                        }
+                    });
+
+                    await hc.init();
+                }
+                if (mounted) {
+                    setHashconnect(hc);
+                }
+            } catch (err) {
+                console.error("Failed to initialize HashConnect:", err);
             }
         };
 
