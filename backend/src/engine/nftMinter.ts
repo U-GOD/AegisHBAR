@@ -32,18 +32,22 @@ export async function mintAuditNFT(
         throw new Error("Hedera client not initialized. Cannot mint NFT.");
     }
 
-    const mintTx = new TokenMintTransaction()
-        .setTokenId(CERTIFICATE_TOKEN_ID)
-        .addMetadata(Buffer.from(tokenUri));
+    const mintTool = agentKit.token.tools(agentKit.context).find(t => t.name === "Mint Non-Fungible Token");
+    if (!mintTool) {
+        throw new Error("Mint Non-Fungible Token tool not found in Hedera Agent Kit");
+    }
 
-    const mintResponse = await mintTx.execute(client);
-    const mintReceipt = await mintResponse.getReceipt(client);
-    
-    if (!mintReceipt.serials || mintReceipt.serials.length === 0) {
-        throw new Error("Minting succeeded but no serial number was returned.");
+    const mintResponse = await mintTool.execute(client, agentKit.context, {
+        tokenId: CERTIFICATE_TOKEN_ID,
+        uris: [tokenUri]
+    });
+
+    const serialMatch = mintResponse.match(/serial number:?\s*(\d+)/i);
+    if (!serialMatch) {
+        throw new Error("Minting succeeded but could not extract serial number from tool response: " + mintResponse);
     }
     
-    const serialNumber = mintReceipt.serials[0].toNumber();
+    const serialNumber = parseInt(serialMatch[1], 10);
     console.log(`[NFT Minter] Successfully minted HTS Certificate Serial #${serialNumber}`);
 
 
