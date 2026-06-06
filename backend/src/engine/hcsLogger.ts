@@ -37,13 +37,20 @@ export async function logFindingsToHCS(report: AuditReport): Promise<string> {
             return "";
         }
 
-        const tx = new TopicMessageSubmitTransaction()
-            .setTopicId(topicId)
-            .setMessage(message);
+        const hcsTool = agentKit.consensus.tools(agentKit.context).find(t => t.name === "Submit Topic Message");
+        if (!hcsTool) {
+            throw new Error("Submit Topic Message tool not found in Hedera Agent Kit");
+        }
 
-        const response = await tx.execute(hederaClient);
-        const receipt = await response.getReceipt(hederaClient);
-        const sequenceNumber = receipt.topicSequenceNumber?.toString() || "unknown";
+        const response = await hcsTool.execute(hederaClient, agentKit.context, {
+            topicId,
+            message
+        });
+
+        // The tool returns a human-readable string with the sequence number and tx id
+        // e.g. "Message submitted to topic 0.0.1234. Sequence number: 5. Transaction ID: 0.0.123@123.456"
+        const sequenceNumberMatch = response.match(/Sequence number:\s*(\d+)/i);
+        const sequenceNumber = sequenceNumberMatch ? sequenceNumberMatch[1] : "unknown";
 
         console.log(`[HCS Logger] Finding logged to topic ${topicId}, sequence #${sequenceNumber}`);
 
