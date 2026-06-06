@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useWallet } from "../context/WalletContext";
 
 export function TopNav() {
-    const { address, isConnected, connect, disconnect } = useWallet();
+    const { accountId, isConnected, connect, disconnect } = useWallet();
     const pathname = usePathname();
 
     const navItems = [
@@ -53,7 +53,7 @@ export function TopNav() {
                     ) : (
                         <div className="hidden md:flex items-center gap-2 bg-surface-container border border-outline-variant py-1.5 px-4 rounded text-label-md text-primary font-bold cursor-pointer hover:bg-surface-container-high transition-colors" onClick={disconnect}>
                             <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-                            {address?.slice(0, 6)}...{address?.slice(-4)}
+                            {accountId}
                         </div>
                     )}
                     <button className="md:hidden text-on-surface">
