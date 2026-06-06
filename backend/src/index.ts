@@ -126,6 +126,16 @@ app.get("/api/certificate/:tokenId", async (req: Request, res: Response) => {
     }
 });
 
-app.listen(Number(PORT), "0.0.0.0", () => {
-    console.log(`Server running on port ${PORT}`);
+const serverPort = Number(process.env.PORT) || 8080;
+
+app.listen(serverPort, "0.0.0.0", () => {
+    console.log(`[AegisHBAR] Server running securely on 0.0.0.0:${serverPort}`);
+});
+
+process.on("uncaughtException", (err) => {
+    console.error("CRITICAL CRASH (uncaughtException):", err);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+    console.error("CRITICAL CRASH (unhandledRejection):", reason);
 });
