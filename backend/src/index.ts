@@ -11,13 +11,18 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({
+const corsOptions = {
     origin: "*",
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-402-Payment", "X-Requested-With", "Accept"],
     exposedHeaders: ["WWW-Authenticate", "X-402-PaymentRequired"]
-}));
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
+
+// Explicitly handle preflight OPTIONS requests BEFORE x402 middleware intercepts them
+app.options("*", cors(corsOptions));
 
 // x402 payment gate: returns HTTP 402 for unpaid requests to protected routes
 app.use(createX402Middleware());
