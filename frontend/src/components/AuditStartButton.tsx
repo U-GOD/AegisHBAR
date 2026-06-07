@@ -73,54 +73,109 @@ export function AuditStartButton({ sourceCode, categories, totalCost, onStatusCh
             });
 
             if (response.status === 402) {
-                const authHeader = response.headers.get("x-402-payment");
-                if (!authHeader) throw new Error("Missing x-402-payment header");
-
-                const paymentUrl = authHeader.split(" ")[1];
-                if (!paymentUrl) throw new Error("Invalid x-402-payment header format");
-
-                const invoiceRes = await fetch(paymentUrl);
-                const invoice = await invoiceRes.json();
-
-                if (!invoice.amount || !invoice.recipient) {
-                    throw new Error("Invalid invoice details from facilitator");
+                // x402 v2: Server sends PAYMENT-REQUIRED header (base64-encoded JSON)
+                const paymentRequiredHeader = response.headers.get("payment-required") || response.headers.get("PAYMENT-REQUIRED");
+                console.log("402 Response Headers:", [...response.headers.entries()]);
+                
+                let paymentRequired: any;
+                
+                if (paymentRequiredHeader) {
+                    // v2 header: base64-encoded JSON
+                    try {
+                        paymentRequired = JSON.parse(atob(paymentRequiredHeader));
+                    } catch {
+                        // Try reading from response body as fallback
+                        paymentRequired = await response.json().catch(() => null);
+                    }
+                } else {
+                    // Fallback: read from JSON body (some x402 versions do this)
+                    paymentRequired = await response.json().catch(() => null);
                 }
 
+                if (!paymentRequired || !paymentRequired.accepts || paymentRequired.accepts.length === 0) {
+                    throw new Error("Invalid 402 response: no payment requirements found");
+                }
+
+                console.log("Payment Required:", paymentRequired);
+
+                // Select the matching payment option based on totalCost
+                // The amount in the requirements is in the smallest unit (tinybars for HBAR)
+                const desiredAmount = String(Math.floor(totalCost * 100_000_000));
+                const selectedRequirement = paymentRequired.accepts.find(
+                    (a: any) => String(a.amount) === desiredAmount
+                ) || paymentRequired.accepts[0];
+
+                console.log("Selected requirement:", selectedRequirement);
+
+                // Build the Hedera transfer transaction
                 const { TransferTransaction, Hbar, AccountId, TransactionId } = await import("@hashgraph/sdk");
 
                 const transaction = new TransferTransaction()
-                    .addHbarTransfer(accountId, Hbar.fromTinybars(-invoice.amount))
-                    .addHbarTransfer(invoice.recipient, Hbar.fromTinybars(invoice.amount));
-                
+                    .addHbarTransfer(accountId, Hbar.fromTinybars(-Number(selectedRequirement.amount)))
+                    .addHbarTransfer(selectedRequirement.payTo, Hbar.fromTinybars(Number(selectedRequirement.amount)));
+
                 transaction.setNodeAccountIds([AccountId.fromString("0.0.3")]);
-                transaction.setTransactionId(TransactionId.generate(accountId)); 
+                // Use the feePayer from the requirement (Blocky402's fee payer account)
+                const feePayer = selectedRequirement.extra?.feePayer || accountId;
+                transaction.setTransactionId(TransactionId.generate(feePayer));
+                transaction.freeze();
 
                 const signer = hashconnect.getSigner(AccountId.fromString(accountId) as any);
-                const frozenTx = await transaction.freezeWithSigner(signer as any);
-                const signedTx = await frozenTx.signWithSigner(signer as any);
+                const signedTx = await transaction.signWithSigner(signer as any);
 
-                const payload = {
-                    transaction: toBase64(signedTx.toBytes())
+                // Build the x402 v2 PaymentPayload
+                const paymentPayload = {
+                    x402Version: 2,
+                    payload: {
+                        transaction: toBase64(signedTx.toBytes())
+                    },
+                    accepted: selectedRequirement,
+                    resource: paymentRequired.resource
                 };
-                
-                const payloadB64 = btoa(JSON.stringify(payload));
-                const paymentAuth = `Blocky ${paymentUrl} payment="${payloadB64}"`;
+
+                console.log("Payment payload:", paymentPayload);
+
+                // Encode as base64 for the PAYMENT-SIGNATURE header
+                const paymentSignature = btoa(JSON.stringify(paymentPayload));
 
                 updateStatus("submitting");
 
+                // Retry the request with the payment signature
                 response = await fetch(`${BACKEND_URL}/api/audit`, {
                     method: "POST",
                     headers: { 
                         "Content-Type": "application/json",
-                        "x-402-payment": paymentAuth
+                        "Payment-Signature": paymentSignature
                     },
                     body: JSON.stringify(reqBody),
                 });
             }
 
             if (!response.ok) {
-                const body = await response.json().catch(() => ({}));
-                throw new Error(body.error || `Backend returned ${response.status}`);
+                let errorMsg = `Backend returned ${response.status}`;
+                
+                if (response.status === 402) {
+                    // The backend returned 402 again, which means Blocky402 rejected the transaction.
+                    // The error reason is in the PAYMENT-REQUIRED header.
+                    const header = response.headers.get("payment-required") || response.headers.get("PAYMENT-REQUIRED");
+                    if (header) {
+                        try {
+                            const pr = JSON.parse(atob(header));
+                            if (pr.error) {
+                                errorMsg = `Payment rejected: ${pr.error}`;
+                            }
+                        } catch (e) {
+                            console.error("Failed to parse error header", e);
+                        }
+                    }
+                } else {
+                    const body = await response.json().catch(() => ({}));
+                    if (body.error || body.errorMessage) {
+                        errorMsg = body.error || body.errorMessage;
+                    }
+                }
+                
+                throw new Error(errorMsg);
             }
 
             updateStatus("streaming");
