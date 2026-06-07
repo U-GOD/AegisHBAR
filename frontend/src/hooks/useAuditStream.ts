@@ -25,6 +25,7 @@ interface UseAuditStreamReturn {
     events: StreamEvent[];
     currentPhase: StreamPhase | null;
     report: any | null;
+    certificate: any | null;
     isStreaming: boolean;
     error: string | null;
     startStream: (url: string) => void;
@@ -39,6 +40,7 @@ export function useAuditStream(): UseAuditStreamReturn {
     const [events, setEvents] = useState<StreamEvent[]>([]);
     const [currentPhase, setCurrentPhase] = useState<StreamPhase | null>(null);
     const [report, setReport] = useState<any | null>(null);
+    const [certificate, setCertificate] = useState<any | null>(null);
     const [isStreaming, setIsStreaming] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const sourceRef = useRef<EventSource | null>(null);
@@ -55,6 +57,7 @@ export function useAuditStream(): UseAuditStreamReturn {
         setEvents([]);
         setCurrentPhase(null);
         setReport(null);
+        setCertificate(null);
         setIsStreaming(false);
         setError(null);
     }, [cleanup]);
@@ -64,6 +67,7 @@ export function useAuditStream(): UseAuditStreamReturn {
         setEvents([]);
         setCurrentPhase(null);
         setReport(null);
+        setCertificate(null);
         setError(null);
         setIsStreaming(true);
 
@@ -78,7 +82,8 @@ export function useAuditStream(): UseAuditStreamReturn {
                 setCurrentPhase(parsed.phase);
 
                 if (parsed.phase === "complete") {
-                    setReport(parsed.data);
+                    setReport(parsed.data?.report || parsed.data);
+                    setCertificate(parsed.data?.certificate || null);
                     setIsStreaming(false);
                     source.close();
                 }
@@ -109,6 +114,7 @@ export function useAuditStream(): UseAuditStreamReturn {
         events,
         currentPhase,
         report,
+        certificate,
         isStreaming,
         error,
         startStream,
