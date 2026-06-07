@@ -59,16 +59,27 @@ export function analyzeReentrancy(contractNode: any): Finding[] {
 function isExternalCall(node: any): boolean {
     if (!node) return false;
 
+    let expr = null;
+
     if (node.type === "ExpressionStatement" && node.expression) {
-        const expr = node.expression;
-        if (expr.type === "FunctionCall" && expr.expression) {
-            const callee = expr.expression;
-            // Matches: address.call, address.send, address.transfer
-            if (callee.type === "MemberAccess") {
-                const member = callee.memberName;
-                if (["call", "send", "transfer", "delegatecall", "staticcall"].includes(member)) {
-                    return true;
-                }
+        expr = node.expression;
+    } else if (node.type === "VariableDeclarationStatement" && node.initialValue) {
+        expr = node.initialValue;
+    }
+
+    if (expr && expr.type === "FunctionCall" && expr.expression) {
+        let callee = expr.expression;
+        
+        // Handle {value: amount} syntax which wraps in NameValueExpression
+        if (callee.type === "NameValueExpression" && callee.expression) {
+            callee = callee.expression;
+        }
+
+        // Matches: address.call, address.send, address.transfer
+        if (callee.type === "MemberAccess") {
+            const member = callee.memberName;
+            if (["call", "send", "transfer", "delegatecall", "staticcall"].includes(member)) {
+                return true;
             }
         }
     }
