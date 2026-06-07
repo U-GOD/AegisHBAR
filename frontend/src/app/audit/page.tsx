@@ -123,7 +123,7 @@ export default function Home() {
                         {/* The Immutable Certificate Card */}
                         <CertificateViewer 
                             report={stream.report} 
-                            certificate={stream.report.certificate || (stream.events[stream.events.length - 1]?.data?.certificate)} 
+                            certificate={stream.certificate} 
                         />
 
                         {/* Detailed Findings List */}
