@@ -20,14 +20,23 @@ export function createX402Middleware() {
 
     const routeConfig: Record<string, any> = {
         "POST /api/audit": {
-            accepts: {
-                scheme: "exact",
-                price: "0.5",
-                network: `hedera:${HEDERA_NETWORK}`,
-                asset: "0.0.0", // Native HBAR
-                payTo: AGENT_WALLET_ADDRESS,
-                extra: { feePayer: "0.0.7162784" } // Blocky402 Testnet Fee Payer
-            },
+            accepts: [
+                { scheme: "exact", price: { amount: "20000000", asset: "0.0.0" }, network: `hedera:${HEDERA_NETWORK}`, payTo: AGENT_WALLET_ADDRESS, extra: { feePayer: "0.0.7162784" } },
+                { scheme: "exact", price: { amount: "50000000", asset: "0.0.0" }, network: `hedera:${HEDERA_NETWORK}`, payTo: AGENT_WALLET_ADDRESS, extra: { feePayer: "0.0.7162784" } },
+                { scheme: "exact", price: { amount: "70000000", asset: "0.0.0" }, network: `hedera:${HEDERA_NETWORK}`, payTo: AGENT_WALLET_ADDRESS, extra: { feePayer: "0.0.7162784" } },
+                { scheme: "exact", price: { amount: "100000000", asset: "0.0.0" }, network: `hedera:${HEDERA_NETWORK}`, payTo: AGENT_WALLET_ADDRESS, extra: { feePayer: "0.0.7162784" } },
+                { scheme: "exact", price: { amount: "120000000", asset: "0.0.0" }, network: `hedera:${HEDERA_NETWORK}`, payTo: AGENT_WALLET_ADDRESS, extra: { feePayer: "0.0.7162784" } },
+                { scheme: "exact", price: { amount: "150000000", asset: "0.0.0" }, network: `hedera:${HEDERA_NETWORK}`, payTo: AGENT_WALLET_ADDRESS, extra: { feePayer: "0.0.7162784" } },
+                { scheme: "exact", price: { amount: "170000000", asset: "0.0.0" }, network: `hedera:${HEDERA_NETWORK}`, payTo: AGENT_WALLET_ADDRESS, extra: { feePayer: "0.0.7162784" } },
+                { scheme: "exact", price: { amount: "200000000", asset: "0.0.0" }, network: `hedera:${HEDERA_NETWORK}`, payTo: AGENT_WALLET_ADDRESS, extra: { feePayer: "0.0.7162784" } },
+                { scheme: "exact", price: { amount: "220000000", asset: "0.0.0" }, network: `hedera:${HEDERA_NETWORK}`, payTo: AGENT_WALLET_ADDRESS, extra: { feePayer: "0.0.7162784" } },
+                { scheme: "exact", price: { amount: "250000000", asset: "0.0.0" }, network: `hedera:${HEDERA_NETWORK}`, payTo: AGENT_WALLET_ADDRESS, extra: { feePayer: "0.0.7162784" } },
+                { scheme: "exact", price: { amount: "270000000", asset: "0.0.0" }, network: `hedera:${HEDERA_NETWORK}`, payTo: AGENT_WALLET_ADDRESS, extra: { feePayer: "0.0.7162784" } },
+                { scheme: "exact", price: { amount: "300000000", asset: "0.0.0" }, network: `hedera:${HEDERA_NETWORK}`, payTo: AGENT_WALLET_ADDRESS, extra: { feePayer: "0.0.7162784" } },
+                { scheme: "exact", price: { amount: "320000000", asset: "0.0.0" }, network: `hedera:${HEDERA_NETWORK}`, payTo: AGENT_WALLET_ADDRESS, extra: { feePayer: "0.0.7162784" } },
+                { scheme: "exact", price: { amount: "350000000", asset: "0.0.0" }, network: `hedera:${HEDERA_NETWORK}`, payTo: AGENT_WALLET_ADDRESS, extra: { feePayer: "0.0.7162784" } },
+                { scheme: "exact", price: { amount: "370000000", asset: "0.0.0" }, network: `hedera:${HEDERA_NETWORK}`, payTo: AGENT_WALLET_ADDRESS, extra: { feePayer: "0.0.7162784" } },
+            ],
             description: "Smart contract security audit",
         },
     };
