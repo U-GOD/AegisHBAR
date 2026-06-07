@@ -14,8 +14,8 @@ const PORT = process.env.PORT || 3001;
 app.use((req: Request, res: Response, next) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-402-Payment, X-Requested-With, Accept");
-    res.setHeader("Access-Control-Expose-Headers", "WWW-Authenticate, X-402-PaymentRequired");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, Payment-Signature, PAYMENT-SIGNATURE, X-Payment, X-Requested-With, Accept");
+    res.setHeader("Access-Control-Expose-Headers", "WWW-Authenticate, X-402-PaymentRequired, Payment-Required, PAYMENT-REQUIRED, Payment-Response, PAYMENT-RESPONSE");
 
     // Short-circuit preflight requests immediately
     if (req.method === "OPTIONS") {
